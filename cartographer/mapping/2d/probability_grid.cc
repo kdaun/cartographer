@@ -17,13 +17,13 @@ int ToFlatIndex(const Eigen::Array2i& cell_index, const MapLimits& limits) {
 }  // namespace
 
 ProbabilityGrid::ProbabilityGrid(const MapLimits& limits)
-    : limits_(limits),
+    : Grid2D(limits),
       cells_(
           limits_.cell_limits().num_x_cells * limits_.cell_limits().num_y_cells,
           kUnknownProbabilityValue) {}
 
 ProbabilityGrid::ProbabilityGrid(const proto::ProbabilityGrid& proto)
-    : limits_(proto.limits()), cells_() {
+    : Grid2D(MapLimits(proto.limits())), cells_() {
   if (proto.has_known_cells_box()) {
     const auto& box = proto.known_cells_box();
     known_cells_box_ =
@@ -86,24 +86,34 @@ float ProbabilityGrid::GetProbability(const Eigen::Array2i& cell_index) const {
   return kMinProbability;
 }
 
+float ProbabilityGrid::GetCorrespondance(
+    const Eigen::Array2i& cell_index) const {
+  return GetProbability(cell_index);
+}
+
 // Returns true if the probability at the specified index is known.
 bool ProbabilityGrid::IsKnown(const Eigen::Array2i& cell_index) const {
   return limits_.Contains(cell_index) &&
          cells_[ToFlatIndex(cell_index, limits_)] != kUnknownProbabilityValue;
 }
 
-// Fills in 'offset' and 'limits' to define a subregion of that contains all
-// known cells.
-void ProbabilityGrid::ComputeCroppedLimits(Eigen::Array2i* const offset,
-                                           CellLimits* const limits) const {
-  if (known_cells_box_.isEmpty()) {
-    *offset = Eigen::Array2i::Zero();
-    *limits = CellLimits(1, 1);
-    return;
+proto::ProbabilityGrid ProbabilityGrid::ToProto() const {
+  proto::ProbabilityGrid result;
+  *result.mutable_limits() = mapping::ToProto(limits_);
+  result.mutable_cells()->Reserve(cells_.size());
+  for (const auto& cell : cells_) {
+    result.mutable_cells()->Add(cell);
   }
-  *offset = known_cells_box_.min().array();
-  *limits = CellLimits(known_cells_box_.sizes().x() + 1,
-                       known_cells_box_.sizes().y() + 1);
+  CHECK(update_indices_.empty()) << "Serializing a grid during an update is "
+                                    "not supported. Finish the update first.";
+  if (!known_cells_box_.isEmpty()) {
+    auto* const box = result.mutable_known_cells_box();
+    box->set_max_x(known_cells_box_.max().x());
+    box->set_max_y(known_cells_box_.max().y());
+    box->set_min_x(known_cells_box_.min().x());
+    box->set_min_y(known_cells_box_.min().y());
+  }
+  return result;
 }
 
 // Grows the map as necessary to include 'point'. This changes the meaning of
@@ -137,25 +147,6 @@ void ProbabilityGrid::GrowLimits(const Eigen::Vector2f& point) {
       known_cells_box_.translate(Eigen::Vector2i(x_offset, y_offset));
     }
   }
-}
-
-proto::ProbabilityGrid ProbabilityGrid::ToProto() const {
-  proto::ProbabilityGrid result;
-  *result.mutable_limits() = mapping::ToProto(limits_);
-  result.mutable_cells()->Reserve(cells_.size());
-  for (const auto& cell : cells_) {
-    result.mutable_cells()->Add(cell);
-  }
-  CHECK(update_indices_.empty()) << "Serializing a grid during an update is "
-                                    "not supported. Finish the update first.";
-  if (!known_cells_box_.isEmpty()) {
-    auto* const box = result.mutable_known_cells_box();
-    box->set_max_x(known_cells_box_.max().x());
-    box->set_max_y(known_cells_box_.max().y());
-    box->set_min_x(known_cells_box_.min().x());
-    box->set_min_y(known_cells_box_.min().y());
-  }
-  return result;
 }
 
 }  // namespace mapping

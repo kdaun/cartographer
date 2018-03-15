@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-#ifndef CARTOGRAPHER_MAPPING_2D_SUBMAP_2D_H_
-#define CARTOGRAPHER_MAPPING_2D_SUBMAP_2D_H_
+#ifndef CARTOGRAPHER_MAPPING_2D_SUBMAP_2D__PROBABILITY_GRID_H_
+#define CARTOGRAPHER_MAPPING_2D_SUBMAP_2D__PROBABILITY_GRID_H_
 
 #include <memory>
 #include <vector>
 
 #include "Eigen/Core"
 #include "cartographer/common/lua_parameter_dictionary.h"
-#include "cartographer/mapping/2d/grid_2d.h"
 #include "cartographer/mapping/2d/map_limits.h"
+#include "cartographer/mapping/2d/probability_grid.h"
 #include "cartographer/mapping/2d/proto/submaps_options_2d.pb.h"
 #include "cartographer/mapping/2d/range_data_inserter_2d.h"
+#include "cartographer/mapping/2d/submap_2d.h"
 #include "cartographer/mapping/proto/serialization.pb.h"
 #include "cartographer/mapping/proto/submap_visualization.pb.h"
 #include "cartographer/mapping/submaps.h"
@@ -36,23 +37,36 @@
 namespace cartographer {
 namespace mapping {
 
-proto::SubmapsOptions2D CreateSubmapsOptions2D(
-    common::LuaParameterDictionary* parameter_dictionary);
+ProbabilityGrid ComputeCroppedProbabilityGrid(
+    const ProbabilityGrid& probability_grid);
 
-class Submap2D : public Submap {
+class Submap2DProbabilityGrid : public Submap2D {
  public:
-  Submap2D(const MapLimits& limits, const Eigen::Vector2f& origin);
-  explicit Submap2D(const proto::Submap2D& proto);
+  Submap2DProbabilityGrid(
+      const MapLimits& limits, const Eigen::Vector2f& origin,
+      std::shared_ptr<RangeDataInserter2D> range_data_inserter);
+  explicit Submap2DProbabilityGrid(const proto::Submap2D& proto);
 
-  virtual const Grid2D& grid() const = 0;
+  void ToProto(proto::Submap* proto,
+               bool include_probability_grid_data) const override;
+  void UpdateFromProto(const proto::Submap& proto) override;
+
+  void ToResponseProto(const transform::Rigid3d& global_submap_pose,
+                       proto::SubmapQuery::Response* response) const override;
+
+  const ProbabilityGrid& grid() const override { return probability_grid_; }
 
   // Insert 'range_data' into this submap using 'range_data_inserter'. The
   // submap must not be finished yet.
-  virtual void InsertRangeData(const sensor::RangeData& range_data) = 0;
-  virtual void Finish() = 0;
+  void InsertRangeData(const sensor::RangeData& range_data) override;
+  void Finish() override;
+
+ private:
+  ProbabilityGrid probability_grid_;
+  std::shared_ptr<RangeDataInserter2D> range_data_inserter_;
 };
 
 }  // namespace mapping
 }  // namespace cartographer
 
-#endif  // CARTOGRAPHER_MAPPING_2D_SUBMAP_2D_H_
+#endif  // CARTOGRAPHER_MAPPING_2D_SUBMAP_2D__PROBABILITY_GRID_H_

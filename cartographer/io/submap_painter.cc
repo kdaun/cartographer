@@ -15,6 +15,7 @@
  */
 
 #include "cartographer/io/submap_painter.h"
+#include <cartographer/mapping/2d/submap_2d_probability_grid.h>
 
 #include "cartographer/mapping/2d/submap_2d.h"
 #include "cartographer/mapping/3d/submap_3d.h"
@@ -118,7 +119,8 @@ void FillSubmapSlice(
     local_pose = submap.local_pose();
     submap.ToResponseProto(global_submap_pose, &response);
   } else {
-    ::cartographer::mapping::Submap2D submap(proto.submap_2d());
+    ::cartographer::mapping::Submap2DProbabilityGrid submap(
+        proto.submap_2d());  // TODO(kdaun) check submap type
     local_pose = submap.local_pose();
     submap.ToResponseProto(global_submap_pose, &response);
   }

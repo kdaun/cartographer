@@ -85,7 +85,7 @@ void ConstraintBuilder2D::MaybeAddConstraint(
     ++pending_computations_[current_computation_];
     const int current_computation = current_computation_;
     ScheduleSubmapScanMatcherConstructionAndQueueWorkItem(
-        submap_id, &submap->probability_grid(), [=]() EXCLUDES(mutex_) {
+        submap_id, &submap->grid(), [=]() EXCLUDES(mutex_) {
           ComputeConstraint(submap_id, submap, node_id,
                             false, /* match_full_submap */
                             constant_data, initial_relative_pose, constraint);
@@ -104,7 +104,7 @@ void ConstraintBuilder2D::MaybeAddGlobalConstraint(
   ++pending_computations_[current_computation_];
   const int current_computation = current_computation_;
   ScheduleSubmapScanMatcherConstructionAndQueueWorkItem(
-      submap_id, &submap->probability_grid(), [=]() EXCLUDES(mutex_) {
+      submap_id, &submap->grid(), [=]() EXCLUDES(mutex_) {
         ComputeConstraint(
             submap_id, submap, node_id, true, /* match_full_submap */
             constant_data, transform::Rigid2d::Identity(), constraint);
@@ -130,7 +130,7 @@ void ConstraintBuilder2D::WhenDone(
 }
 
 void ConstraintBuilder2D::ScheduleSubmapScanMatcherConstructionAndQueueWorkItem(
-    const SubmapId& submap_id, const ProbabilityGrid* const submap,
+    const SubmapId& submap_id, const Grid2D* const submap,
     const std::function<void()>& work_item) {
   if (submap_scan_matchers_[submap_id].fast_correlative_scan_matcher !=
       nullptr) {
@@ -145,7 +145,7 @@ void ConstraintBuilder2D::ScheduleSubmapScanMatcherConstructionAndQueueWorkItem(
 }
 
 void ConstraintBuilder2D::ConstructSubmapScanMatcher(
-    const SubmapId& submap_id, const ProbabilityGrid* const submap) {
+    const SubmapId& submap_id, const Grid2D* const submap) {
   auto submap_scan_matcher =
       common::make_unique<scan_matching::FastCorrelativeScanMatcher2D>(
           *submap, options_.fast_correlative_scan_matcher_options());

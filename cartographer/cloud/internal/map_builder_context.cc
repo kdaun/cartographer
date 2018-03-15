@@ -17,6 +17,7 @@
 #include "cartographer/cloud/internal/map_builder_context.h"
 
 #include "cartographer/cloud/internal/map_builder_server.h"
+#include "cartographer/mapping/2d/submap_2d_probability_grid.h"
 #include "cartographer/mapping/internal/2d/local_slam_result_2d.h"
 #include "cartographer/mapping/internal/3d/local_slam_result_3d.h"
 
@@ -82,7 +83,8 @@ std::shared_ptr<mapping::Submap2D> MapBuilderContext::UpdateSubmap2D(
   if (submap_it == unfinished_submaps_.end()) {
     // Seeing a submap for the first time it should never be finished.
     CHECK(!proto.submap_2d().finished());
-    submap_2d_ptr = std::make_shared<mapping::Submap2D>(proto.submap_2d());
+    submap_2d_ptr = std::make_shared<mapping::Submap2DProbabilityGrid>(
+        proto.submap_2d());  // TODO(kdaun) check Submap2D type
     unfinished_submaps_.Insert(submap_id, submap_2d_ptr);
   } else {
     submap_2d_ptr =

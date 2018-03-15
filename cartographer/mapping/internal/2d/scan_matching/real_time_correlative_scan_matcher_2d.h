@@ -65,7 +65,7 @@ class RealTimeCorrelativeScanMatcher2D {
   // returns the score.
   double Match(const transform::Rigid2d& initial_pose_estimate,
                const sensor::PointCloud& point_cloud,
-               const ProbabilityGrid& probability_grid,
+               const Grid2D& probability_grid,
                transform::Rigid2d* pose_estimate) const;
 
   // Computes the score for each Candidate2D in a collection. The cost is
@@ -73,7 +73,7 @@ class RealTimeCorrelativeScanMatcher2D {
   // CostFunctions: http://ceres-solver.org/modeling.html
   //
   // Visible for testing.
-  void ScoreCandidates(const ProbabilityGrid& probability_grid,
+  void ScoreCandidates(const Grid2D& probability_grid,
                        const std::vector<DiscreteScan2D>& discrete_scans,
                        const SearchParameters& search_parameters,
                        std::vector<Candidate2D>* candidates) const;

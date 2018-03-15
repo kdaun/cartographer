@@ -31,6 +31,7 @@
 #include "Eigen/Eigenvalues"
 #include "cartographer/common/make_unique.h"
 #include "cartographer/common/math.h"
+#include "cartographer/mapping/2d/submap_2d_probability_grid.h"
 #include "cartographer/mapping/pose_graph/proto/constraint_builder_options.pb.h"
 #include "cartographer/sensor/compressed_point_cloud.h"
 #include "cartographer/sensor/internal/voxel_filter.h"
@@ -431,7 +432,8 @@ void PoseGraph2D::AddSubmapFromProto(
   const SubmapId submap_id = {submap.submap_id().trajectory_id(),
                               submap.submap_id().submap_index()};
   std::shared_ptr<const Submap2D> submap_ptr =
-      std::make_shared<const Submap2D>(submap.submap_2d());
+      std::make_shared<const Submap2DProbabilityGrid>(
+          submap.submap_2d());  // TODO(kdaun) check submap type
   const transform::Rigid2d global_submap_pose_2d =
       transform::Project2D(global_submap_pose);
 

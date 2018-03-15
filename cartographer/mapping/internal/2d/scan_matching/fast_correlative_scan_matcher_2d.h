@@ -49,8 +49,8 @@ CreateFastCorrelativeScanMatcherOptions2D(
 // y0 <= y < y0.
 class PrecomputationGrid2D {
  public:
-  PrecomputationGrid2D(const ProbabilityGrid& probability_grid,
-                       const CellLimits& limits, int width,
+  PrecomputationGrid2D(const Grid2D& probability_grid, const CellLimits& limits,
+                       int width,
                        std::vector<float>* reusable_intermediate_grid);
 
   // Returns a value between 0 and 255 to represent probabilities between
@@ -98,7 +98,7 @@ class PrecomputationGridStack;
 class FastCorrelativeScanMatcher2D {
  public:
   FastCorrelativeScanMatcher2D(
-      const ProbabilityGrid& probability_grid,
+      const Grid2D& probability_grid,
       const proto::FastCorrelativeScanMatcherOptions2D& options);
   ~FastCorrelativeScanMatcher2D();
 

@@ -36,7 +36,7 @@ class OccupiedSpaceCostFunction2D {
  public:
   static ceres::CostFunction* CreateAutoDiffCostFunction(
       const double scaling_factor, const sensor::PointCloud& point_cloud,
-      const ProbabilityGrid& probability_grid) {
+      const Grid2D& probability_grid) {
     return new ceres::AutoDiffCostFunction<OccupiedSpaceCostFunction2D,
                                            ceres::DYNAMIC /* residuals */,
                                            3 /* pose variables */>(
@@ -79,7 +79,7 @@ class OccupiedSpaceCostFunction2D {
    public:
     enum { DATA_DIMENSION = 1 };
 
-    explicit GridArrayAdapter(const ProbabilityGrid& probability_grid)
+    explicit GridArrayAdapter(const Grid2D& probability_grid)
         : probability_grid_(probability_grid) {}
 
     void GetValue(const int row, const int column, double* const value) const {
@@ -87,7 +87,7 @@ class OccupiedSpaceCostFunction2D {
           column >= NumCols() - kPadding) {
         *value = kMinProbability;
       } else {
-        *value = static_cast<double>(probability_grid_.GetProbability(
+        *value = static_cast<double>(probability_grid_.GetCorrespondance(
             Eigen::Array2i(column - kPadding, row - kPadding)));
       }
     }
@@ -103,12 +103,12 @@ class OccupiedSpaceCostFunction2D {
     }
 
    private:
-    const ProbabilityGrid& probability_grid_;
+    const Grid2D& probability_grid_;
   };
 
   OccupiedSpaceCostFunction2D(const double scaling_factor,
                               const sensor::PointCloud& point_cloud,
-                              const ProbabilityGrid& probability_grid)
+                              const Grid2D& probability_grid)
       : scaling_factor_(scaling_factor),
         point_cloud_(point_cloud),
         probability_grid_(probability_grid) {}
@@ -119,7 +119,7 @@ class OccupiedSpaceCostFunction2D {
 
   const double scaling_factor_;
   const sensor::PointCloud& point_cloud_;
-  const ProbabilityGrid& probability_grid_;
+  const Grid2D& probability_grid_;
 };
 
 }  // namespace scan_matching

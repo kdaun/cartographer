@@ -21,6 +21,7 @@
 #include <memory>
 
 #include "cartographer/common/time.h"
+#include "cartographer/mapping/2d/active_submaps_2d.h"
 #include "cartographer/mapping/2d/proto/local_trajectory_builder_options_2d.pb.h"
 #include "cartographer/mapping/2d/submap_2d.h"
 #include "cartographer/mapping/internal/2d/scan_matching/ceres_scan_matcher_2d.h"

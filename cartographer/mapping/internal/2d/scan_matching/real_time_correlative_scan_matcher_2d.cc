@@ -73,8 +73,7 @@ RealTimeCorrelativeScanMatcher2D::GenerateExhaustiveSearchCandidates(
 
 double RealTimeCorrelativeScanMatcher2D::Match(
     const transform::Rigid2d& initial_pose_estimate,
-    const sensor::PointCloud& point_cloud,
-    const ProbabilityGrid& probability_grid,
+    const sensor::PointCloud& point_cloud, const Grid2D& probability_grid,
     transform::Rigid2d* pose_estimate) const {
   CHECK_NOTNULL(pose_estimate);
 
@@ -108,7 +107,7 @@ double RealTimeCorrelativeScanMatcher2D::Match(
 }
 
 void RealTimeCorrelativeScanMatcher2D::ScoreCandidates(
-    const ProbabilityGrid& probability_grid,
+    const Grid2D& probability_grid,
     const std::vector<DiscreteScan2D>& discrete_scans,
     const SearchParameters& search_parameters,
     std::vector<Candidate2D>* const candidates) const {
@@ -120,7 +119,7 @@ void RealTimeCorrelativeScanMatcher2D::ScoreCandidates(
           xy_index.x() + candidate.x_index_offset,
           xy_index.y() + candidate.y_index_offset);
       const float probability =
-          probability_grid.GetProbability(proposed_xy_index);
+          probability_grid.GetCorrespondance(proposed_xy_index);
       candidate.score += probability;
     }
     candidate.score /=

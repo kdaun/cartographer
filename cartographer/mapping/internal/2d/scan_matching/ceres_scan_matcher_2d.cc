@@ -62,7 +62,7 @@ CeresScanMatcher2D::~CeresScanMatcher2D() {}
 void CeresScanMatcher2D::Match(const Eigen::Vector2d& target_translation,
                                const transform::Rigid2d& initial_pose_estimate,
                                const sensor::PointCloud& point_cloud,
-                               const ProbabilityGrid& probability_grid,
+                               const Grid2D& probability_grid,
                                transform::Rigid2d* const pose_estimate,
                                ceres::Solver::Summary* const summary) const {
   double ceres_pose_estimate[3] = {initial_pose_estimate.translation().x(),

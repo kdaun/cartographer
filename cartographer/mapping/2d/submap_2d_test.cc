@@ -15,6 +15,8 @@
  */
 
 #include "cartographer/mapping/2d/submap_2d.h"
+#include "cartographer/mapping/2d/active_submaps_2d.h"
+#include "cartographer/mapping/2d/submap_2d_probability_grid.h"
 
 #include <map>
 #include <memory>
@@ -69,26 +71,26 @@ TEST(Submap2DTest, TheRightNumberOfRangeDataAreInserted) {
 }
 
 TEST(Submap2DTest, ToFromProto) {
-  Submap2D expected(
+  Submap2DProbabilityGrid expected(
       MapLimits(1., Eigen::Vector2d(2., 3.), CellLimits(100, 110)),
-      Eigen::Vector2f(4.f, 5.f));
+      Eigen::Vector2f(4.f, 5.f), std::shared_ptr<RangeDataInserter2D>());
   proto::Submap proto;
   expected.ToProto(&proto, true /* include_probability_grid_data */);
   EXPECT_TRUE(proto.has_submap_2d());
   EXPECT_FALSE(proto.has_submap_3d());
-  const auto actual = Submap2D(proto.submap_2d());
+  const auto actual = Submap2DProbabilityGrid(proto.submap_2d());
   EXPECT_TRUE(expected.local_pose().translation().isApprox(
       actual.local_pose().translation(), 1e-6));
   EXPECT_TRUE(expected.local_pose().rotation().isApprox(
       actual.local_pose().rotation(), 1e-6));
   EXPECT_EQ(expected.num_range_data(), actual.num_range_data());
   EXPECT_EQ(expected.finished(), actual.finished());
-  EXPECT_NEAR(expected.probability_grid().limits().resolution(),
-              actual.probability_grid().limits().resolution(), 1e-6);
-  EXPECT_TRUE(expected.probability_grid().limits().max().isApprox(
-      actual.probability_grid().limits().max(), 1e-6));
-  EXPECT_EQ(expected.probability_grid().limits().cell_limits().num_x_cells,
-            actual.probability_grid().limits().cell_limits().num_x_cells);
+  EXPECT_NEAR(expected.grid().limits().resolution(),
+              actual.grid().limits().resolution(), 1e-6);
+  EXPECT_TRUE(expected.grid().limits().max().isApprox(
+      actual.grid().limits().max(), 1e-6));
+  EXPECT_EQ(expected.grid().limits().cell_limits().num_x_cells,
+            actual.grid().limits().cell_limits().num_x_cells);
 }
 
 }  // namespace

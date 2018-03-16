@@ -60,7 +60,7 @@ class RealTimeCorrelativeScanMatcher2D {
   RealTimeCorrelativeScanMatcher2D& operator=(
       const RealTimeCorrelativeScanMatcher2D&) = delete;
 
-  // Aligns 'point_cloud' within the 'probability_grid' given an
+  // Aligns 'point_cloud' within the 'grid' given an
   // 'initial_pose_estimate' then updates 'pose_estimate' with the result and
   // returns the score.
   double Match(const transform::Rigid2d& initial_pose_estimate,

@@ -29,7 +29,7 @@ namespace cartographer {
 namespace mapping {
 namespace scan_matching {
 
-// Computes a cost for matching the 'point_cloud' to the 'probability_grid' with
+// Computes a cost for matching the 'point_cloud' to the 'grid' with
 // a 'pose'. The cost increases when points fall into less occupied space, i.e.
 // at pixels with lower values.
 class OccupiedSpaceCostFunction2D {
@@ -68,7 +68,7 @@ class OccupiedSpaceCostFunction2D {
           (limits.max().y() - world[1]) / limits.resolution() - 0.5 +
               T(kPadding),
           &residual[i]);
-      residual[i] = scaling_factor_ * (1. - residual[i]);
+      residual[i] = scaling_factor_ * residual[i];
     }
     return true;
   }

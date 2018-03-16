@@ -34,13 +34,13 @@ namespace mapping {
 proto::RangeDataInserterOptions2D CreateRangeDataInserterOptions2D(
     common::LuaParameterDictionary* parameter_dictionary);
 
-class RangeDataInserter2D {
+class RangeDataInserter2DProbabilityGrid {
  public:
-  explicit RangeDataInserter2D(
+  explicit RangeDataInserter2DProbabilityGrid(
       const proto::RangeDataInserterOptions2D& options);
 
-  RangeDataInserter2D(const RangeDataInserter2D&) = delete;
-  RangeDataInserter2D& operator=(const RangeDataInserter2D&) = delete;
+  RangeDataInserter2DProbabilityGrid(const RangeDataInserter2DProbabilityGrid&) = delete;
+  RangeDataInserter2DProbabilityGrid& operator=(const RangeDataInserter2DProbabilityGrid&) = delete;
 
   // Inserts 'range_data' into 'probability_grid'.
   void Insert(const sensor::RangeData& range_data,

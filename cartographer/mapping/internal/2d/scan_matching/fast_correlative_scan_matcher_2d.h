@@ -49,7 +49,7 @@ CreateFastCorrelativeScanMatcherOptions2D(
 // y0 <= y < y0.
 class PrecomputationGrid2D {
  public:
-  PrecomputationGrid2D(const Grid2D& probability_grid, const CellLimits& limits,
+  PrecomputationGrid2D(const Grid2D& grid, const CellLimits& limits,
                        int width,
                        std::vector<float>* reusable_intermediate_grid);
 
@@ -66,7 +66,7 @@ class PrecomputationGrid2D {
             static_cast<unsigned>(wide_limits_.num_x_cells) ||
         static_cast<unsigned>(local_xy_index.y()) >=
             static_cast<unsigned>(wide_limits_.num_y_cells)) {
-      return 0;
+      return 255;
     }
     const int stride = wide_limits_.num_x_cells;
     return cells_[local_xy_index.x() + local_xy_index.y() * stride];
@@ -81,7 +81,7 @@ class PrecomputationGrid2D {
  private:
   uint8 ComputeCellValue(float probability) const;
 
-  // Offset of the precomputation grid in relation to the 'probability_grid'
+  // Offset of the precomputation grid in relation to the 'grid'
   // including the additional 'width' - 1 cells.
   const Eigen::Array2i offset_;
 
@@ -106,7 +106,7 @@ class FastCorrelativeScanMatcher2D {
   FastCorrelativeScanMatcher2D& operator=(const FastCorrelativeScanMatcher2D&) =
       delete;
 
-  // Aligns 'point_cloud' within the 'probability_grid' given an
+  // Aligns 'point_cloud' within the 'grid' given an
   // 'initial_pose_estimate'. If a score above 'min_score' (excluding equality)
   // is possible, true is returned, and 'score' and 'pose_estimate' are updated
   // with the result.
@@ -114,11 +114,11 @@ class FastCorrelativeScanMatcher2D {
              const sensor::PointCloud& point_cloud, float min_score,
              float* score, transform::Rigid2d* pose_estimate) const;
 
-  // Aligns 'point_cloud' within the full 'probability_grid', i.e., not
+  // Aligns 'point_cloud' within the full 'grid', i.e., not
   // restricted to the configured search window. If a score above 'min_score'
   // (excluding equality) is possible, true is returned, and 'score' and
   // 'pose_estimate' are updated with the result.
-  bool MatchFullSubmap(const sensor::PointCloud& point_cloud, float min_score,
+  bool MatchFullSubmap(const sensor::PointCloud& point_cloud, float max_score,
                        float* score, transform::Rigid2d* pose_estimate) const;
 
  private:
@@ -128,7 +128,7 @@ class FastCorrelativeScanMatcher2D {
   bool MatchWithSearchParameters(
       SearchParameters search_parameters,
       const transform::Rigid2d& initial_pose_estimate,
-      const sensor::PointCloud& point_cloud, float min_score, float* score,
+      const sensor::PointCloud& point_cloud, float max_score, float* score,
       transform::Rigid2d* pose_estimate) const;
   std::vector<Candidate2D> ComputeLowestResolutionCandidates(
       const std::vector<DiscreteScan2D>& discrete_scans,
@@ -142,7 +142,7 @@ class FastCorrelativeScanMatcher2D {
   Candidate2D BranchAndBound(const std::vector<DiscreteScan2D>& discrete_scans,
                              const SearchParameters& search_parameters,
                              const std::vector<Candidate2D>& candidates,
-                             int candidate_depth, float min_score) const;
+                             int candidate_depth, float max_score) const;
 
   const proto::FastCorrelativeScanMatcherOptions2D options_;
   MapLimits limits_;

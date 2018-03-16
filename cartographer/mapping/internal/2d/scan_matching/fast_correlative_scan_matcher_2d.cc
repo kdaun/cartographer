@@ -34,42 +34,42 @@ namespace mapping {
 namespace scan_matching {
 namespace {
 
-// A collection of values which can be added and later removed, and the maximum
+// A collection of values which can be added and later removed, and the minimum
 // of the current values in the collection can be retrieved.
 // All of it in (amortized) O(1).
-class SlidingWindowMaximum {
+class SlidingWindowMinimum {
  public:
   void AddValue(const float value) {
-    while (!non_ascending_maxima_.empty() &&
-           value > non_ascending_maxima_.back()) {
-      non_ascending_maxima_.pop_back();
+    while (!non_descending_minima.empty() &&
+           value < non_descending_minima.back()) {
+      non_descending_minima.pop_back();
     }
-    non_ascending_maxima_.push_back(value);
+    non_descending_minima.push_back(value);
   }
 
   void RemoveValue(const float value) {
     // DCHECK for performance, since this is done for every value in the
     // precomputation grid.
-    DCHECK(!non_ascending_maxima_.empty());
-    DCHECK_LE(value, non_ascending_maxima_.front());
-    if (value == non_ascending_maxima_.front()) {
-      non_ascending_maxima_.pop_front();
+    DCHECK(!non_descending_minima.empty());
+    DCHECK_GE(value, non_descending_minima.front());
+    if (value == non_descending_minima.front()) {
+      non_descending_minima.pop_front();
     }
   }
 
-  float GetMaximum() const {
+  float GetMinimum() const {
     // DCHECK for performance, since this is done for every value in the
     // precomputation grid.
-    DCHECK_GT(non_ascending_maxima_.size(), 0);
-    return non_ascending_maxima_.front();
+    DCHECK_GT(non_descending_minima.size(), 0);
+    return non_descending_minima.front();
   }
 
-  void CheckIsEmpty() const { CHECK_EQ(non_ascending_maxima_.size(), 0); }
+  void CheckIsEmpty() const { CHECK_EQ(non_descending_minima.size(), 0); }
 
  private:
-  // Maximum of the current sliding window at the front. Then the maximum of the
+  // Minimum of the current sliding window at the front. Then the minimum of the
   // remaining window that came after this values first occurence, and so on.
-  std::deque<float> non_ascending_maxima_;
+  std::deque<float> non_descending_minima;
 };
 
 }  // namespace
@@ -88,7 +88,7 @@ CreateFastCorrelativeScanMatcherOptions2D(
 }
 
 PrecomputationGrid2D::PrecomputationGrid2D(
-    const Grid2D& probability_grid, const CellLimits& limits, const int width,
+    const Grid2D& grid, const CellLimits& limits, const int width,
     std::vector<float>* reusable_intermediate_grid)
     : offset_(-width + 1, -width + 1),
       wide_limits_(limits.num_x_cells + width - 1,
@@ -98,66 +98,66 @@ PrecomputationGrid2D::PrecomputationGrid2D(
   CHECK_GE(limits.num_x_cells, 1);
   CHECK_GE(limits.num_y_cells, 1);
   const int stride = wide_limits_.num_x_cells;
-  // First we compute the maximum probability for each (x0, y) achieved in the
+  // First we compute the minimum correspondance for each (x0, y) achieved in the
   // span defined by x0 <= x < x0 + width.
   std::vector<float>& intermediate = *reusable_intermediate_grid;
   intermediate.resize(wide_limits_.num_x_cells * limits.num_y_cells);
   for (int y = 0; y != limits.num_y_cells; ++y) {
-    SlidingWindowMaximum current_values;
+    SlidingWindowMinimum current_values;
     current_values.AddValue(
-        probability_grid.GetCorrespondance(Eigen::Array2i(0, y)));
+        grid.GetCorrespondance(Eigen::Array2i(0, y)));
     for (int x = -width + 1; x != 0; ++x) {
-      intermediate[x + width - 1 + y * stride] = current_values.GetMaximum();
+      intermediate[x + width - 1 + y * stride] = current_values.GetMinimum();
       if (x + width < limits.num_x_cells) {
         current_values.AddValue(
-            probability_grid.GetCorrespondance(Eigen::Array2i(x + width, y)));
+            grid.GetCorrespondance(Eigen::Array2i(x + width, y)));
       }
     }
     for (int x = 0; x < limits.num_x_cells - width; ++x) {
-      intermediate[x + width - 1 + y * stride] = current_values.GetMaximum();
+      intermediate[x + width - 1 + y * stride] = current_values.GetMinimum();
       current_values.RemoveValue(
-          probability_grid.GetCorrespondance(Eigen::Array2i(x, y)));
+          grid.GetCorrespondance(Eigen::Array2i(x, y)));
       current_values.AddValue(
-          probability_grid.GetCorrespondance(Eigen::Array2i(x + width, y)));
+          grid.GetCorrespondance(Eigen::Array2i(x + width, y)));
     }
     for (int x = std::max(limits.num_x_cells - width, 0);
          x != limits.num_x_cells; ++x) {
-      intermediate[x + width - 1 + y * stride] = current_values.GetMaximum();
+      intermediate[x + width - 1 + y * stride] = current_values.GetMinimum();
       current_values.RemoveValue(
-          probability_grid.GetCorrespondance(Eigen::Array2i(x, y)));
+          grid.GetCorrespondance(Eigen::Array2i(x, y)));
     }
     current_values.CheckIsEmpty();
   }
-  // For each (x, y), we compute the maximum probability in the width x width
+  // For each (x, y), we compute the minimum correspondance in the width x width
   // region starting at each (x, y) and precompute the resulting bound on the
   // score.
   for (int x = 0; x != wide_limits_.num_x_cells; ++x) {
-    SlidingWindowMaximum current_values;
+    SlidingWindowMinimum current_values;
     current_values.AddValue(intermediate[x]);
     for (int y = -width + 1; y != 0; ++y) {
       cells_[x + (y + width - 1) * stride] =
-          ComputeCellValue(current_values.GetMaximum());
+          ComputeCellValue(current_values.GetMinimum());
       if (y + width < limits.num_y_cells) {
         current_values.AddValue(intermediate[x + (y + width) * stride]);
       }
     }
     for (int y = 0; y < limits.num_y_cells - width; ++y) {
       cells_[x + (y + width - 1) * stride] =
-          ComputeCellValue(current_values.GetMaximum());
+          ComputeCellValue(current_values.GetMinimum());
       current_values.RemoveValue(intermediate[x + y * stride]);
       current_values.AddValue(intermediate[x + (y + width) * stride]);
     }
     for (int y = std::max(limits.num_y_cells - width, 0);
          y != limits.num_y_cells; ++y) {
       cells_[x + (y + width - 1) * stride] =
-          ComputeCellValue(current_values.GetMaximum());
+          ComputeCellValue(current_values.GetMinimum());
       current_values.RemoveValue(intermediate[x + y * stride]);
     }
     current_values.CheckIsEmpty();
   }
 }
 
-uint8 PrecomputationGrid2D::ComputeCellValue(const float probability) const {
+uint8 PrecomputationGrid2D::ComputeCellValue(const float probability) const { //TODO(kdaun) check how this behaves for tsdf
   const int cell_value =
       common::RoundToInt((probability - kMinProbability) *
                          (255.f / (kMaxProbability - kMinProbability)));
@@ -174,10 +174,10 @@ class PrecomputationGridStack {
     CHECK_GE(options.branch_and_bound_depth(), 1);
     const int max_width = 1 << (options.branch_and_bound_depth() - 1);
     precomputation_grids_.reserve(options.branch_and_bound_depth());
-    std::vector<float> reusable_intermediate_grid;
     const CellLimits limits = probability_grid.limits().cell_limits();
-    reusable_intermediate_grid.reserve((limits.num_x_cells + max_width - 1) *
-                                       limits.num_y_cells);
+    std::vector<float> reusable_intermediate_grid((limits.num_x_cells + max_width - 1) *
+        limits.num_y_cells, 1.- kMinProbability); //TODO(kdaun) 1.- kMinProbability should be kMaxCorrespondence
+
     for (int i = 0; i != options.branch_and_bound_depth(); ++i) {
       const int width = 1 << i;
       precomputation_grids_.emplace_back(probability_grid, limits, width,
@@ -218,7 +218,7 @@ bool FastCorrelativeScanMatcher2D::Match(
 }
 
 bool FastCorrelativeScanMatcher2D::MatchFullSubmap(
-    const sensor::PointCloud& point_cloud, float min_score, float* score,
+    const sensor::PointCloud& point_cloud, float max_score, float* score,
     transform::Rigid2d* pose_estimate) const {
   // Compute a search window around the center of the submap that includes it
   // fully.
@@ -231,13 +231,13 @@ bool FastCorrelativeScanMatcher2D::MatchFullSubmap(
                           Eigen::Vector2d(limits_.cell_limits().num_y_cells,
                                           limits_.cell_limits().num_x_cells));
   return MatchWithSearchParameters(search_parameters, center, point_cloud,
-                                   min_score, score, pose_estimate);
+                                   max_score, score, pose_estimate);
 }
 
 bool FastCorrelativeScanMatcher2D::MatchWithSearchParameters(
     SearchParameters search_parameters,
     const transform::Rigid2d& initial_pose_estimate,
-    const sensor::PointCloud& point_cloud, float min_score, float* score,
+    const sensor::PointCloud& point_cloud, float max_score, float* score,
     transform::Rigid2d* pose_estimate) const {
   CHECK_NOTNULL(score);
   CHECK_NOTNULL(pose_estimate);
@@ -259,8 +259,8 @@ bool FastCorrelativeScanMatcher2D::MatchWithSearchParameters(
       ComputeLowestResolutionCandidates(discrete_scans, search_parameters);
   const Candidate2D best_candidate = BranchAndBound(
       discrete_scans, search_parameters, lowest_resolution_candidates,
-      precomputation_grid_stack_->max_depth(), min_score);
-  if (best_candidate.score > min_score) {
+      precomputation_grid_stack_->max_depth(), max_score);
+  if (best_candidate.score < max_score) {
     *score = best_candidate.score;
     *pose_estimate = transform::Rigid2d(
         {initial_pose_estimate.translation().x() + best_candidate.x,
@@ -339,23 +339,23 @@ void FastCorrelativeScanMatcher2D::ScoreCandidates(
         sum / static_cast<float>(discrete_scans[candidate.scan_index].size()));
   }
   std::sort(candidates->begin(), candidates->end(),
-            std::greater<Candidate2D>());
+            std::less<Candidate2D>());
 }
 
 Candidate2D FastCorrelativeScanMatcher2D::BranchAndBound(
     const std::vector<DiscreteScan2D>& discrete_scans,
     const SearchParameters& search_parameters,
     const std::vector<Candidate2D>& candidates, const int candidate_depth,
-    float min_score) const {
+    float max_score) const {
   if (candidate_depth == 0) {
     // Return the best candidate.
     return *candidates.begin();
   }
 
   Candidate2D best_high_resolution_candidate(0, 0, 0, search_parameters);
-  best_high_resolution_candidate.score = min_score;
+  best_high_resolution_candidate.score = max_score;
   for (const Candidate2D& candidate : candidates) {
-    if (candidate.score <= min_score) {
+    if (candidate.score >= max_score) {
       break;
     }
     std::vector<Candidate2D> higher_resolution_candidates;
@@ -378,7 +378,7 @@ Candidate2D FastCorrelativeScanMatcher2D::BranchAndBound(
     ScoreCandidates(precomputation_grid_stack_->Get(candidate_depth - 1),
                     discrete_scans, search_parameters,
                     &higher_resolution_candidates);
-    best_high_resolution_candidate = std::max(
+    best_high_resolution_candidate = std::min(
         best_high_resolution_candidate,
         BranchAndBound(discrete_scans, search_parameters,
                        higher_resolution_candidates, candidate_depth - 1,

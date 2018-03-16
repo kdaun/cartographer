@@ -46,7 +46,7 @@ class RealTimeCorrelativeScanMatcherTest : public ::testing::Test {
           "hit_probability = 0.7, "
           "miss_probability = 0.4, "
           "}");
-      range_data_inserter_ = common::make_unique<RangeDataInserter2D>(
+      range_data_inserter_ = common::make_unique<RangeDataInserter2DProbabilityGrid>(
           CreateRangeDataInserterOptions2D(parameter_dictionary.get()));
     }
     point_cloud_.emplace_back(0.025f, 0.175f, 0.f);
@@ -76,7 +76,7 @@ class RealTimeCorrelativeScanMatcherTest : public ::testing::Test {
   }
 
   ProbabilityGrid probability_grid_;
-  std::unique_ptr<RangeDataInserter2D> range_data_inserter_;
+  std::unique_ptr<RangeDataInserter2DProbabilityGrid> range_data_inserter_;
   sensor::PointCloud point_cloud_;
   std::unique_ptr<RealTimeCorrelativeScanMatcher2D>
       real_time_correlative_scan_matcher_;

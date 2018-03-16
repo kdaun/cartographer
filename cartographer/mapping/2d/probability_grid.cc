@@ -88,7 +88,7 @@ float ProbabilityGrid::GetProbability(const Eigen::Array2i& cell_index) const {
 
 float ProbabilityGrid::GetCorrespondance(
     const Eigen::Array2i& cell_index) const {
-  return GetProbability(cell_index);
+  return 1.f - GetProbability(cell_index);
 }
 
 // Returns true if the probability at the specified index is known.

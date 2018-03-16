@@ -74,7 +74,7 @@ void ActiveSubmaps2D::AddSubmap(const Eigen::Vector2f& origin) {
                                             Eigen::Vector2d::Ones(),
                 CellLimits(kInitialSubmapSize, kInitialSubmapSize)),
       origin,
-      std::make_shared<RangeDataInserter2D>(
+      std::make_shared<RangeDataInserter2DProbabilityGrid>(
           options_.range_data_inserter_options())));  // TODO(kdaun) check
                                                       // submap type
   // TODO(kdaun) ensure RangeDataInserter is only created once

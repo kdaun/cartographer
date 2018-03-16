@@ -68,7 +68,7 @@ class ProbabilityGridPointsProcessor : public PointsProcessor {
   const std::vector<mapping::proto::Trajectory> trajectories_;
   std::unique_ptr<FileWriter> file_writer_;
   PointsProcessor* const next_;
-  mapping::RangeDataInserter2D range_data_inserter_;
+  mapping::RangeDataInserter2DProbabilityGrid range_data_inserter_;
   mapping::ProbabilityGrid probability_grid_;
 };
 

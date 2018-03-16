@@ -106,7 +106,7 @@ class ConstraintBuilder2D {
 
  private:
   struct SubmapScanMatcher {
-    const Grid2D* probability_grid;
+    const Grid2D* grid;
     std::unique_ptr<scan_matching::FastCorrelativeScanMatcher2D>
         fast_correlative_scan_matcher;
   };

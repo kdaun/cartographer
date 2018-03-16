@@ -41,7 +41,7 @@ class RangeDataInserterTest2D : public ::testing::Test {
         "miss_probability = 0.4, "
         "}");
     options_ = CreateRangeDataInserterOptions2D(parameter_dictionary.get());
-    range_data_inserter_ = common::make_unique<RangeDataInserter2D>(options_);
+    range_data_inserter_ = common::make_unique<RangeDataInserter2DProbabilityGrid>(options_);
   }
 
   void InsertPointCloud() {
@@ -57,7 +57,7 @@ class RangeDataInserterTest2D : public ::testing::Test {
   }
 
   ProbabilityGrid probability_grid_;
-  std::unique_ptr<RangeDataInserter2D> range_data_inserter_;
+  std::unique_ptr<RangeDataInserter2DProbabilityGrid> range_data_inserter_;
   proto::RangeDataInserterOptions2D options_;
 };
 

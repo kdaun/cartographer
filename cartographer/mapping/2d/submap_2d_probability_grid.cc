@@ -52,7 +52,7 @@ ProbabilityGrid ComputeCroppedProbabilityGrid(
 
 Submap2DProbabilityGrid::Submap2DProbabilityGrid(
     const MapLimits& limits, const Eigen::Vector2f& origin,
-    std::shared_ptr<RangeDataInserter2D> range_data_inserter)
+    std::shared_ptr<RangeDataInserter2DProbabilityGrid> range_data_inserter)
     : Submap2D(limits, origin),
       probability_grid_(limits),
       range_data_inserter_(range_data_inserter) {}

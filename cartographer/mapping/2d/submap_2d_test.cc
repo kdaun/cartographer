@@ -73,7 +73,7 @@ TEST(Submap2DTest, TheRightNumberOfRangeDataAreInserted) {
 TEST(Submap2DTest, ToFromProto) {
   Submap2DProbabilityGrid expected(
       MapLimits(1., Eigen::Vector2d(2., 3.), CellLimits(100, 110)),
-      Eigen::Vector2f(4.f, 5.f), std::shared_ptr<RangeDataInserter2D>());
+      Eigen::Vector2f(4.f, 5.f), std::shared_ptr<RangeDataInserter2DProbabilityGrid>());
   proto::Submap proto;
   expected.ToProto(&proto, true /* include_probability_grid_data */);
   EXPECT_TRUE(proto.has_submap_2d());

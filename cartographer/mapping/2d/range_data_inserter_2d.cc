@@ -44,7 +44,7 @@ proto::RangeDataInserterOptions2D CreateRangeDataInserterOptions2D(
   return options;
 }
 
-RangeDataInserter2D::RangeDataInserter2D(
+RangeDataInserter2DProbabilityGrid::RangeDataInserter2DProbabilityGrid(
     const proto::RangeDataInserterOptions2D& options)
     : options_(options),
       hit_table_(
@@ -52,7 +52,7 @@ RangeDataInserter2D::RangeDataInserter2D(
       miss_table_(
           ComputeLookupTableToApplyOdds(Odds(options.miss_probability()))) {}
 
-void RangeDataInserter2D::Insert(
+void RangeDataInserter2DProbabilityGrid::Insert(
     const sensor::RangeData& range_data,
     ProbabilityGrid* const probability_grid) const {
   // By not finishing the update after hits are inserted, we give hits priority

@@ -54,15 +54,15 @@ TEST(PrecomputationGridTest, CorrectValues) {
         &reusable_intermediate_grid);
     for (const Eigen::Array2i& xy_index :
          XYIndexRangeIterator(probability_grid.limits().cell_limits())) {
-      float max_score = -std::numeric_limits<float>::infinity();
+      float min_score = std::numeric_limits<float>::infinity();
       for (int y = 0; y != width; ++y) {
         for (int x = 0; x != width; ++x) {
-          max_score = std::max<float>(
-              max_score,
-              probability_grid.GetProbability(xy_index + Eigen::Array2i(x, y)));
+          min_score = std::min<float>(
+              min_score,
+              probability_grid.GetCorrespondance(xy_index + Eigen::Array2i(x, y)));
         }
       }
-      EXPECT_NEAR(max_score,
+      EXPECT_NEAR(min_score,
                   PrecomputationGrid2D::ToProbability(
                       precomputation_grid.GetValue(xy_index)),
                   1e-4);
@@ -88,15 +88,15 @@ TEST(PrecomputationGridTest, TinyProbabilityGrid) {
         &reusable_intermediate_grid);
     for (const Eigen::Array2i& xy_index :
          XYIndexRangeIterator(probability_grid.limits().cell_limits())) {
-      float max_score = -std::numeric_limits<float>::infinity();
+      float min_score = std::numeric_limits<float>::infinity();
       for (int y = 0; y != width; ++y) {
         for (int x = 0; x != width; ++x) {
-          max_score = std::max<float>(
-              max_score,
-              probability_grid.GetProbability(xy_index + Eigen::Array2i(x, y)));
+          min_score = std::min<float>(
+              min_score,
+              probability_grid.GetCorrespondance(xy_index + Eigen::Array2i(x, y)));
         }
       }
-      EXPECT_NEAR(max_score,
+      EXPECT_NEAR(min_score,
                   PrecomputationGrid2D::ToProbability(
                       precomputation_grid.GetValue(xy_index)),
                   1e-4);
@@ -131,9 +131,9 @@ CreateRangeDataInserterTestOptions2D() {
 TEST(FastCorrelativeScanMatcherTest, CorrectPose) {
   std::mt19937 prng(42);
   std::uniform_real_distribution<float> distribution(-1.f, 1.f);
-  RangeDataInserter2D range_data_inserter(
+  RangeDataInserter2DProbabilityGrid range_data_inserter(
       CreateRangeDataInserterTestOptions2D());
-  constexpr float kMinScore = 0.1f;
+  constexpr float kMaxScore = 0.9f;
   const auto options = CreateFastCorrelativeScanMatcherTestOptions2D(3);
 
   sensor::PointCloud point_cloud;
@@ -152,10 +152,10 @@ TEST(FastCorrelativeScanMatcherTest, CorrectPose) {
     ProbabilityGrid probability_grid(
         MapLimits(0.05, Eigen::Vector2d(5., 5.), CellLimits(200, 200)));
     range_data_inserter.Insert(
-        sensor::RangeData{
-            Eigen::Vector3f(expected_pose.translation().x(),
-                            expected_pose.translation().y(), 0.f),
-            sensor::TransformPointCloud(
+                sensor::RangeData{
+                    Eigen::Vector3f(expected_pose.translation().x(),
+                                    expected_pose.translation().y(), 0.f),
+                    sensor::TransformPointCloud(
                 point_cloud, transform::Embed3D(expected_pose.cast<float>())),
             {}},
         &probability_grid);
@@ -165,12 +165,13 @@ TEST(FastCorrelativeScanMatcherTest, CorrectPose) {
                                                                options);
     transform::Rigid2d pose_estimate;
     float score;
-    EXPECT_TRUE(fast_correlative_scan_matcher.Match(
-        transform::Rigid2d::Identity(), point_cloud, kMinScore, &score,
-        &pose_estimate));
-    EXPECT_LT(kMinScore, score);
+    bool found_match = fast_correlative_scan_matcher.Match(
+        transform::Rigid2d::Identity(), point_cloud, kMaxScore, &score,
+        &pose_estimate);
+    EXPECT_TRUE(found_match);
+    EXPECT_GT(kMaxScore, score);
     EXPECT_THAT(expected_pose,
-                transform::IsNearly(pose_estimate.cast<float>(), 0.03f))
+                transform::IsNearly(pose_estimate.cast<float>(), 0.05f))
         << "Actual: " << transform::ToProto(pose_estimate).DebugString()
         << "\nExpected: " << transform::ToProto(expected_pose).DebugString();
   }
@@ -179,9 +180,9 @@ TEST(FastCorrelativeScanMatcherTest, CorrectPose) {
 TEST(FastCorrelativeScanMatcherTest, FullSubmapMatching) {
   std::mt19937 prng(42);
   std::uniform_real_distribution<float> distribution(-1.f, 1.f);
-  RangeDataInserter2D range_data_inserter(
+  RangeDataInserter2DProbabilityGrid range_data_inserter(
       CreateRangeDataInserterTestOptions2D());
-  constexpr float kMinScore = 0.1f;
+  constexpr float kMaxScore = 0.9f;
   const auto options = CreateFastCorrelativeScanMatcherTestOptions2D(6);
 
   sensor::PointCloud unperturbed_point_cloud;
@@ -219,10 +220,10 @@ TEST(FastCorrelativeScanMatcherTest, FullSubmapMatching) {
     transform::Rigid2d pose_estimate;
     float score;
     EXPECT_TRUE(fast_correlative_scan_matcher.MatchFullSubmap(
-        point_cloud, kMinScore, &score, &pose_estimate));
-    EXPECT_LT(kMinScore, score);
+        point_cloud, kMaxScore, &score, &pose_estimate));
+    EXPECT_GT(kMaxScore, score);
     EXPECT_THAT(expected_pose,
-                transform::IsNearly(pose_estimate.cast<float>(), 0.03f))
+                transform::IsNearly(pose_estimate.cast<float>(), 0.05f))
         << "Actual: " << transform::ToProto(pose_estimate).DebugString()
         << "\nExpected: " << transform::ToProto(expected_pose).DebugString();
   }

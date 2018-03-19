@@ -22,7 +22,7 @@ ProbabilityGrid::ProbabilityGrid(const MapLimits& limits)
           limits_.cell_limits().num_x_cells * limits_.cell_limits().num_y_cells,
           kUnknownProbabilityValue) {}
 
-ProbabilityGrid::ProbabilityGrid(const proto::ProbabilityGrid& proto)
+ProbabilityGrid::ProbabilityGrid(const proto::Submap2D& proto)
     : Grid2D(MapLimits(proto.limits())), cells_() {
   if (proto.has_known_cells_box()) {
     const auto& box = proto.known_cells_box();
@@ -30,8 +30,11 @@ ProbabilityGrid::ProbabilityGrid(const proto::ProbabilityGrid& proto)
         Eigen::AlignedBox2i(Eigen::Vector2i(box.min_x(), box.min_y()),
                             Eigen::Vector2i(box.max_x(), box.max_y()));
   }
-  cells_.reserve(proto.cells_size());
-  for (const auto& cell : proto.cells()) {
+  proto::Submap2DProbabilityGridDetails details;
+  CHECK(proto.details().Is<proto::Submap2DProbabilityGridDetails>());
+  proto.details().UnpackTo(&details);
+  cells_.reserve(details.cells_size());
+  for (const auto& cell : details.cells()) {
     CHECK_LE(cell, std::numeric_limits<uint16>::max());
     cells_.push_back(cell);
   }
@@ -97,13 +100,9 @@ bool ProbabilityGrid::IsKnown(const Eigen::Array2i& cell_index) const {
          cells_[ToFlatIndex(cell_index, limits_)] != kUnknownProbabilityValue;
 }
 
-proto::ProbabilityGrid ProbabilityGrid::ToProto() const {
-  proto::ProbabilityGrid result;
+proto::Submap2D ProbabilityGrid::ToProto() const {
+  proto::Submap2D result;
   *result.mutable_limits() = mapping::ToProto(limits_);
-  result.mutable_cells()->Reserve(cells_.size());
-  for (const auto& cell : cells_) {
-    result.mutable_cells()->Add(cell);
-  }
   CHECK(update_indices_.empty()) << "Serializing a grid during an update is "
                                     "not supported. Finish the update first.";
   if (!known_cells_box_.isEmpty()) {
@@ -113,6 +112,12 @@ proto::ProbabilityGrid ProbabilityGrid::ToProto() const {
     box->set_min_x(known_cells_box_.min().x());
     box->set_min_y(known_cells_box_.min().y());
   }
+  proto::Submap2DProbabilityGridDetails details;
+  details.mutable_cells()->Reserve(cells_.size());
+  for (const auto& cell : cells_) {
+    details.mutable_cells()->Add(cell);
+  }
+  result.mutable_details()->PackFrom(details);
   return result;
 }
 

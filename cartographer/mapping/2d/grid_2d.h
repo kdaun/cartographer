@@ -21,7 +21,7 @@
 
 #include "cartographer/common/port.h"
 #include "cartographer/mapping/2d/map_limits.h"
-#include "cartographer/mapping/2d/proto/probability_grid.pb.h"
+#include "cartographer/mapping/2d/proto/submap_2d.pb.h"
 #include "cartographer/mapping/2d/xy_index.h"
 
 namespace cartographer {

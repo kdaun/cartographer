@@ -29,12 +29,14 @@ using Eigen::Array2i;
 using Eigen::Vector2f;
 
 TEST(ProbabilityGridTest, ProtoConstructor) {
-  proto::ProbabilityGrid proto;
+  proto::Submap2D proto;
   const MapLimits limits(1., {2., 3.}, CellLimits(4., 5.));
   *proto.mutable_limits() = ToProto(limits);
+  proto::Submap2DProbabilityGridDetails details;
   for (int i = 6; i < 12; ++i) {
-    proto.mutable_cells()->Add(static_cast<uint16>(i));
+    details.mutable_cells()->Add(static_cast<uint16>(i));
   }
+  proto.mutable_details()->PackFrom(details);
   proto.mutable_known_cells_box()->set_max_x(19);
   proto.mutable_known_cells_box()->set_max_y(20);
   proto.mutable_known_cells_box()->set_min_x(21);

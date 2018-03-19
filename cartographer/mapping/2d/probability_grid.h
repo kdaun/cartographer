@@ -22,7 +22,7 @@
 #include "cartographer/common/port.h"
 #include "cartographer/mapping/2d/grid_2d.h"
 #include "cartographer/mapping/2d/map_limits.h"
-#include "cartographer/mapping/2d/proto/probability_grid.pb.h"
+#include "cartographer/mapping/2d/proto/submap_2d.pb.h"
 #include "cartographer/mapping/2d/xy_index.h"
 
 namespace cartographer {
@@ -32,7 +32,7 @@ namespace mapping {
 class ProbabilityGrid : public Grid2D {
  public:
   explicit ProbabilityGrid(const MapLimits& limits);
-  explicit ProbabilityGrid(const proto::ProbabilityGrid& proto);
+  explicit ProbabilityGrid(const proto::Submap2D& proto);
 
   void FinishUpdate() override;
 
@@ -60,7 +60,7 @@ class ProbabilityGrid : public Grid2D {
 
   virtual void GrowLimits(const Eigen::Vector2f& point) override;
 
-  proto::ProbabilityGrid ToProto() const;
+  proto::Submap2D ToProto() const;
 
  private:
   std::vector<uint16> cells_;  // Highest bit is update marker.

@@ -14,21 +14,27 @@
 
 syntax = "proto3";
 
+import "google/protobuf/any.proto";
 import "cartographer/mapping/2d/proto/map_limits.proto";
 
 package cartographer.mapping.proto;
 
-message ProbabilityGrid {
-  message CellBox {
-    int32 max_x = 1;
-    int32 max_y = 2;
-    int32 min_x = 3;
-    int32 min_y = 4;
-  }
+message CellBox {
+  int32 max_x = 1;
+  int32 max_y = 2;
+  int32 min_x = 3;
+  int32 min_y = 4;
+}
 
+// Serialized state of a Submap2D.
+message Submap2D {
   MapLimits limits = 1;
+  CellBox known_cells_box = 2;
+  google.protobuf.Any details = 3;
+}
+
+message Submap2DProbabilityGridDetails {
   // These values are actually int16s, but protos don't have a native int16
   // type.
-  repeated int32 cells = 2;
-  CellBox known_cells_box = 8;
+  repeated int32 cells = 1;
 }

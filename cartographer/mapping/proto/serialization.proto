@@ -22,10 +22,9 @@ import "cartographer/mapping/proto/trajectory_node_data.proto";
 import "cartographer/sensor/proto/sensor.proto";
 import "cartographer/transform/proto/transform.proto";
 
-message Submap {
+message SubmapWithID {
   SubmapId submap_id = 1;
-  Submap2D submap_2d = 2;
-  Submap3D submap_3d = 3;
+  Submap submap = 2;
 }
 
 message Node {
@@ -56,7 +55,7 @@ message TrajectoryData {
 }
 
 message SerializedData {
-  Submap submap = 1;
+  SubmapWithID submap_with_id = 1;
   Node node = 2;
   ImuData imu_data = 3;
   OdometryData odometry_data = 4;
@@ -67,5 +66,5 @@ message SerializedData {
 message LocalSlamResultData {
   int64 timestamp = 1;
   TrajectoryNodeData node_data = 2;
-  repeated Submap submaps = 3;
+  repeated SubmapWithID submap_with_ids = 3;
 }

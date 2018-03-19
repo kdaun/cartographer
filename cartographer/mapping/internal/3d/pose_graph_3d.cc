@@ -441,15 +441,16 @@ bool PoseGraph3D::IsTrajectoryFrozen(const int trajectory_id) {
 }
 
 void PoseGraph3D::AddSubmapFromProto(
-    const transform::Rigid3d& global_submap_pose, const proto::Submap& submap) {
-  if (!submap.has_submap_3d()) {
+    const transform::Rigid3d& global_submap_pose,
+    const proto::SubmapWithID& submap_with_id) {
+  if (!submap_with_id.submap().has_submap_3d()) {
     return;
   }
 
-  const SubmapId submap_id = {submap.submap_id().trajectory_id(),
-                              submap.submap_id().submap_index()};
+  const SubmapId submap_id = {submap_with_id.submap_id().trajectory_id(),
+                              submap_with_id.submap_id().submap_index()};
   std::shared_ptr<const Submap3D> submap_ptr =
-      std::make_shared<const Submap3D>(submap.submap_3d());
+      std::make_shared<const Submap3D>(submap_with_id.submap());
 
   common::MutexLocker locker(&mutex_);
   AddTrajectoryIfNeeded(submap_id.trajectory_id);

@@ -84,7 +84,7 @@ class PoseGraph : public PoseGraphInterface {
   // Adds a 'submap' from a proto with the given 'global_pose' to the
   // appropriate trajectory.
   virtual void AddSubmapFromProto(const transform::Rigid3d& global_pose,
-                                  const proto::Submap& submap) = 0;
+                                  const proto::SubmapWithID& submap) = 0;
 
   // Adds a 'node' from a proto with the given 'global_pose' to the
   // appropriate trajectory.

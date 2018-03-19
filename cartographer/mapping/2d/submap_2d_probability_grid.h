@@ -45,7 +45,7 @@ class Submap2DProbabilityGrid : public Submap2D {
   Submap2DProbabilityGrid(
       const MapLimits& limits, const Eigen::Vector2f& origin,
       std::shared_ptr<RangeDataInserter2DProbabilityGrid> range_data_inserter);
-  explicit Submap2DProbabilityGrid(const proto::Submap2D& proto);
+  explicit Submap2DProbabilityGrid(const proto::Submap& proto);
 
   void ToProto(proto::Submap* proto,
                bool include_probability_grid_data) const override;

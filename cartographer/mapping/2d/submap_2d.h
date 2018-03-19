@@ -42,7 +42,7 @@ proto::SubmapsOptions2D CreateSubmapsOptions2D(
 class Submap2D : public Submap {
  public:
   Submap2D(const MapLimits& limits, const Eigen::Vector2f& origin);
-  explicit Submap2D(const proto::Submap2D& proto);
+  explicit Submap2D(const proto::Submap& proto);
 
   virtual const Grid2D& grid() const = 0;
 

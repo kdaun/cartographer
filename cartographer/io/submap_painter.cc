@@ -115,12 +115,12 @@ void FillSubmapSlice(
   ::cartographer::mapping::proto::SubmapQuery::Response response;
   ::cartographer::transform::Rigid3d local_pose;
   if (proto.has_submap_3d()) {
-    mapping::Submap3D submap(proto.submap_3d());
+    mapping::Submap3D submap(proto);
     local_pose = submap.local_pose();
     submap.ToResponseProto(global_submap_pose, &response);
   } else {
     ::cartographer::mapping::Submap2DProbabilityGrid submap(
-        proto.submap_2d());  // TODO(kdaun) check submap type
+        proto);  // TODO(kdaun) check submap type
     local_pose = submap.local_pose();
     submap.ToResponseProto(global_submap_pose, &response);
   }

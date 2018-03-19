@@ -57,16 +57,18 @@ Submap2DProbabilityGrid::Submap2DProbabilityGrid(
       probability_grid_(limits),
       range_data_inserter_(range_data_inserter) {}
 
-Submap2DProbabilityGrid::Submap2DProbabilityGrid(const proto::Submap2D& proto)
+Submap2DProbabilityGrid::Submap2DProbabilityGrid(const proto::Submap& proto)
     : Submap2D(proto),
-      probability_grid_(ProbabilityGrid(proto.probability_grid())) {}
+      probability_grid_(ProbabilityGrid(proto.submap_2d().probability_grid())) {
+}
 
 void Submap2DProbabilityGrid::ToProto(
     proto::Submap* const proto, bool include_probability_grid_data) const {
+  auto* const local_pose = proto->mutable_local_pose();
+  *local_pose = transform::ToProto(this->local_pose());
+  proto->set_num_range_data(num_range_data());
+  proto->set_finished(finished());
   auto* const submap_2d = proto->mutable_submap_2d();
-  *submap_2d->mutable_local_pose() = transform::ToProto(local_pose());
-  submap_2d->set_num_range_data(num_range_data());
-  submap_2d->set_finished(finished());
   if (include_probability_grid_data) {
     *submap_2d->mutable_probability_grid() = probability_grid_.ToProto();
   }
@@ -75,8 +77,8 @@ void Submap2DProbabilityGrid::ToProto(
 void Submap2DProbabilityGrid::UpdateFromProto(const proto::Submap& proto) {
   CHECK(proto.has_submap_2d());
   const auto& submap_2d = proto.submap_2d();
-  SetNumRangeData(submap_2d.num_range_data());
-  SetFinished(submap_2d.finished());
+  SetNumRangeData(proto.num_range_data());
+  SetFinished(proto.finished());
   if (submap_2d.has_probability_grid()) {
     probability_grid_ = ProbabilityGrid(submap_2d.probability_grid());
   }

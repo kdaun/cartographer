@@ -191,13 +191,14 @@ void MapBuilder::SerializeState(io::ProtoStreamWriterInterface* const writer) {
   {
     for (const auto& submap_id_data : pose_graph_->GetAllSubmapData()) {
       proto::SerializedData proto;
-      auto* const submap_proto = proto.mutable_submap();
+      auto* const submap_proto = proto.mutable_submap_with_id();
       submap_proto->mutable_submap_id()->set_trajectory_id(
           submap_id_data.id.trajectory_id);
       submap_proto->mutable_submap_id()->set_submap_index(
           submap_id_data.id.submap_index);
       submap_id_data.data.submap->ToProto(
-          submap_proto, true /* include_probability_grid_data */);
+          submap_proto->mutable_submap(),
+          true /* include_probability_grid_data */);
       writer->WriteProto(proto);
     }
   }
@@ -351,13 +352,14 @@ void MapBuilder::LoadState(io::ProtoStreamReaderInterface* const reader,
                                proto.node().node_id().node_index()});
       pose_graph_->AddNodeFromProto(node_pose, proto.node());
     }
-    if (proto.has_submap()) {
-      proto.mutable_submap()->mutable_submap_id()->set_trajectory_id(
-          trajectory_remapping.at(proto.submap().submap_id().trajectory_id()));
-      const transform::Rigid3d submap_pose =
-          submap_poses.at(SubmapId{proto.submap().submap_id().trajectory_id(),
-                                   proto.submap().submap_id().submap_index()});
-      pose_graph_->AddSubmapFromProto(submap_pose, proto.submap());
+    if (proto.has_submap_with_id()) {
+      proto.mutable_submap_with_id()->mutable_submap_id()->set_trajectory_id(
+          trajectory_remapping.at(
+              proto.submap_with_id().submap_id().trajectory_id()));
+      const transform::Rigid3d submap_pose = submap_poses.at(
+          SubmapId{proto.submap_with_id().submap_id().trajectory_id(),
+                   proto.submap_with_id().submap_id().submap_index()});
+      pose_graph_->AddSubmapFromProto(submap_pose, proto.submap_with_id());
     }
     if (proto.has_trajectory_data()) {
       proto.mutable_trajectory_data()->set_trajectory_id(

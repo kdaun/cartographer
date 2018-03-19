@@ -224,8 +224,9 @@ void LocalTrajectoryUploader::ProcessLocalSlamResultDataMessage(
   TranslateTrajectoryId(data_request->mutable_sensor_metadata());
   // A submap also holds a trajectory id that must be translated to uplink's
   // trajectory id.
-  for (mapping::proto::Submap &mutable_submap :
-       *data_request->mutable_local_slam_result_data()->mutable_submaps()) {
+  for (mapping::proto::SubmapWithID &mutable_submap :
+       *data_request->mutable_local_slam_result_data()
+            ->mutable_submap_with_ids()) {
     mutable_submap.mutable_submap_id()->set_trajectory_id(
         data_request->sensor_metadata().trajectory_id());
   }

@@ -74,23 +74,23 @@ void MapBuilderContext::NotifyFinishTrajectory(int trajectory_id) {
 }
 
 std::shared_ptr<mapping::Submap2D> MapBuilderContext::UpdateSubmap2D(
-    const mapping::proto::Submap& proto) {
-  CHECK(proto.has_submap_2d());
+    const mapping::proto::SubmapWithID& proto) {
+  CHECK(proto.submap().has_submap_2d());
   mapping::SubmapId submap_id{proto.submap_id().trajectory_id(),
                               proto.submap_id().submap_index()};
   std::shared_ptr<mapping::Submap2D> submap_2d_ptr;
   auto submap_it = unfinished_submaps_.find(submap_id);
   if (submap_it == unfinished_submaps_.end()) {
     // Seeing a submap for the first time it should never be finished.
-    CHECK(!proto.submap_2d().finished());
+    CHECK(!proto.submap().finished());
     submap_2d_ptr = std::make_shared<mapping::Submap2DProbabilityGrid>(
-        proto.submap_2d());  // TODO(kdaun) check Submap2D type
+        proto.submap());  // TODO(kdaun) check Submap2D type
     unfinished_submaps_.Insert(submap_id, submap_2d_ptr);
   } else {
     submap_2d_ptr =
         std::dynamic_pointer_cast<mapping::Submap2D>(submap_it->data);
     CHECK(submap_2d_ptr);
-    submap_2d_ptr->UpdateFromProto(proto);
+    submap_2d_ptr->UpdateFromProto(proto.submap());
 
     // If the submap was just finished by the recent update, remove it from the
     // list of unfinished submaps.
@@ -106,16 +106,16 @@ std::shared_ptr<mapping::Submap2D> MapBuilderContext::UpdateSubmap2D(
 }
 
 std::shared_ptr<mapping::Submap3D> MapBuilderContext::UpdateSubmap3D(
-    const mapping::proto::Submap& proto) {
-  CHECK(proto.has_submap_3d());
+    const mapping::proto::SubmapWithID& proto) {
+  CHECK(proto.submap().has_submap_3d());
   mapping::SubmapId submap_id{proto.submap_id().trajectory_id(),
                               proto.submap_id().submap_index()};
   std::shared_ptr<mapping::Submap3D> submap_3d_ptr;
   auto submap_it = unfinished_submaps_.find(submap_id);
   if (submap_it == unfinished_submaps_.end()) {
     // Seeing a submap for the first time it should never be finished.
-    CHECK(!proto.submap_3d().finished());
-    submap_3d_ptr = std::make_shared<mapping::Submap3D>(proto.submap_3d());
+    CHECK(!proto.submap().finished());
+    submap_3d_ptr = std::make_shared<mapping::Submap3D>(proto.submap());
     unfinished_submaps_.Insert(submap_id, submap_3d_ptr);
     submap_it = unfinished_submaps_.find(submap_id);
   } else {
@@ -124,7 +124,7 @@ std::shared_ptr<mapping::Submap3D> MapBuilderContext::UpdateSubmap3D(
     CHECK(submap_3d_ptr);
 
     // Update submap with information in incoming request.
-    submap_3d_ptr->UpdateFromProto(proto);
+    submap_3d_ptr->UpdateFromProto(proto.submap());
 
     // If the submap was just finished by the recent update, remove it from the
     // list of unfinished submaps.
@@ -143,11 +143,12 @@ std::unique_ptr<mapping::LocalSlamResultData>
 MapBuilderContext::ProcessLocalSlamResultData(
     const std::string& sensor_id, common::Time time,
     const mapping::proto::LocalSlamResultData& proto) {
-  CHECK_GE(proto.submaps().size(), 1);
-  CHECK(proto.submaps(0).has_submap_2d() || proto.submaps(0).has_submap_3d());
-  if (proto.submaps(0).has_submap_2d()) {
+  CHECK_GE(proto.submap_with_ids().size(), 1);
+  CHECK(proto.submap_with_ids(0).submap().has_submap_2d() ||
+        proto.submap_with_ids(0).submap().has_submap_3d());
+  if (proto.submap_with_ids(0).submap().has_submap_2d()) {
     std::vector<std::shared_ptr<const mapping::Submap2D>> submaps;
-    for (const auto& submap_proto : proto.submaps()) {
+    for (const auto& submap_proto : proto.submap_with_ids()) {
       submaps.push_back(UpdateSubmap2D(submap_proto));
     }
     return common::make_unique<mapping::LocalSlamResult2D>(
@@ -157,7 +158,7 @@ MapBuilderContext::ProcessLocalSlamResultData(
         submaps);
   } else {
     std::vector<std::shared_ptr<const mapping::Submap3D>> submaps;
-    for (const auto& submap_proto : proto.submaps()) {
+    for (const auto& submap_proto : proto.submap_with_ids()) {
       submaps.push_back(UpdateSubmap3D(submap_proto));
     }
     return common::make_unique<mapping::LocalSlamResult3D>(

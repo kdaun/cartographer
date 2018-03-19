@@ -50,9 +50,9 @@ class MapBuilderContext : public MapBuilderContextInterface {
 
  private:
   std::shared_ptr<mapping::Submap2D> UpdateSubmap2D(
-      const mapping::proto::Submap& proto);
+      const mapping::proto::SubmapWithID& proto);
   std::shared_ptr<mapping::Submap3D> UpdateSubmap3D(
-      const mapping::proto::Submap& proto);
+      const mapping::proto::SubmapWithID& proto);
 
   MapBuilderServer* map_builder_server_;
   mapping::MapById<mapping::SubmapId, std::shared_ptr<mapping::Submap>>

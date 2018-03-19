@@ -78,7 +78,7 @@ TEST(Submap2DTest, ToFromProto) {
   expected.ToProto(&proto, true /* include_probability_grid_data */);
   EXPECT_TRUE(proto.has_submap_2d());
   EXPECT_FALSE(proto.has_submap_3d());
-  const auto actual = Submap2DProbabilityGrid(proto.submap_2d());
+  const auto actual = Submap2DProbabilityGrid(proto);
   EXPECT_TRUE(expected.local_pose().translation().isApprox(
       actual.local_pose().translation(), 1e-6));
   EXPECT_TRUE(expected.local_pose().rotation().isApprox(

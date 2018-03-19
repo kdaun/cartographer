@@ -95,7 +95,7 @@ class PoseGraph2D : public PoseGraph {
   void FreezeTrajectory(int trajectory_id) override;
   bool IsTrajectoryFrozen(int trajectory_id) override;
   void AddSubmapFromProto(const transform::Rigid3d& global_submap_pose,
-                          const proto::Submap& submap) override;
+                          const proto::SubmapWithID& submap) override;
   void AddNodeFromProto(const transform::Rigid3d& global_pose,
                         const proto::Node& node) override;
   void SetTrajectoryDataFromProto(const proto::TrajectoryData& data) override;

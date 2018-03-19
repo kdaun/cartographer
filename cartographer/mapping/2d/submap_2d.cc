@@ -47,7 +47,7 @@ Submap2D::Submap2D(const MapLimits& limits, const Eigen::Vector2f& origin)
     : Submap(transform::Rigid3d::Translation(
           Eigen::Vector3d(origin.x(), origin.y(), 0.))) {}
 
-Submap2D::Submap2D(const proto::Submap2D& proto)
+Submap2D::Submap2D(const proto::Submap& proto)
     : Submap(transform::ToRigid3(proto.local_pose())) {
   SetNumRangeData(proto.num_range_data());
   SetFinished(proto.finished());

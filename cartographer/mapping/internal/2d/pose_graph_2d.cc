@@ -424,16 +424,17 @@ bool PoseGraph2D::IsTrajectoryFrozen(const int trajectory_id) {
 }
 
 void PoseGraph2D::AddSubmapFromProto(
-    const transform::Rigid3d& global_submap_pose, const proto::Submap& submap) {
-  if (!submap.has_submap_2d()) {
+    const transform::Rigid3d& global_submap_pose,
+    const proto::SubmapWithID& submap_with_id) {
+  if (!submap_with_id.submap().has_submap_2d()) {
     return;
   }
 
-  const SubmapId submap_id = {submap.submap_id().trajectory_id(),
-                              submap.submap_id().submap_index()};
+  const SubmapId submap_id = {submap_with_id.submap_id().trajectory_id(),
+                              submap_with_id.submap_id().submap_index()};
   std::shared_ptr<const Submap2D> submap_ptr =
       std::make_shared<const Submap2DProbabilityGrid>(
-          submap.submap_2d());  // TODO(kdaun) check submap type
+          submap_with_id.submap());  // TODO(kdaun) check submap type
   const transform::Rigid2d global_submap_pose_2d =
       transform::Project2D(global_submap_pose);
 

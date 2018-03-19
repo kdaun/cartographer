@@ -65,6 +65,8 @@ class ActiveSubmaps2D {
 
   std::vector<std::shared_ptr<Submap2D>> submaps_;
   const proto::SubmapsOptions2D options_;
+  std::shared_ptr<RangeDataInserter2DProbabilityGrid>
+      range_data_inserter_probability_grid_;
   int matching_submap_index_ = 0;
 };
 

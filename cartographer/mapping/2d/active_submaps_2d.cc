@@ -32,7 +32,10 @@ namespace cartographer {
 namespace mapping {
 
 ActiveSubmaps2D::ActiveSubmaps2D(const proto::SubmapsOptions2D& options)
-    : options_(options) {
+    : options_(options),
+      range_data_inserter_probability_grid_(
+          std::make_shared<RangeDataInserter2DProbabilityGrid>(
+              options.range_data_inserter_options())) {
   // We always want to have at least one likelihood field which we can return,
   // and will create it at the origin in absence of a better choice.
   AddSubmap(Eigen::Vector2f::Zero());
@@ -74,10 +77,8 @@ void ActiveSubmaps2D::AddSubmap(const Eigen::Vector2f& origin) {
                                             Eigen::Vector2d::Ones(),
                 CellLimits(kInitialSubmapSize, kInitialSubmapSize)),
       origin,
-      std::make_shared<RangeDataInserter2DProbabilityGrid>(
-          options_.range_data_inserter_options())));  // TODO(kdaun) check
-                                                      // submap type
-  // TODO(kdaun) ensure RangeDataInserter is only created once
+      range_data_inserter_probability_grid_));  // TODO(kdaun) check
+                                                // submap type
 
   LOG(INFO) << "Added submap " << matching_submap_index_ + submaps_.size();
 }

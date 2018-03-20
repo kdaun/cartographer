@@ -38,3 +38,9 @@ message Submap2DProbabilityGridDetails {
   // type.
   repeated int32 cells = 1;
 }
+message Submap2DTSDFDetails {
+  // These values are actually int16s, but protos don't have a native int16
+  // type.
+  repeated int32 tsdf_cells = 1;
+  repeated int32 weight_cells = 2;
+}

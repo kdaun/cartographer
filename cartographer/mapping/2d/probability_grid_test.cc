@@ -140,6 +140,8 @@ TEST(ProbabilityGridTest, GetCellIndex) {
 
   const MapLimits& limits = probability_grid.limits();
   const CellLimits& cell_limits = limits.cell_limits();
+  EXPECT_NEAR(8., limits.max().x(), 1e-6);
+  EXPECT_NEAR(14., limits.max().y(), 1e-6);
   ASSERT_EQ(14, cell_limits.num_x_cells);
   ASSERT_EQ(8, cell_limits.num_y_cells);
   EXPECT_TRUE(
@@ -162,6 +164,26 @@ TEST(ProbabilityGridTest, GetCellIndex) {
       (Array2i(6, 4) == limits.GetCellIndex(Vector2f(-0.5f, 0.5f))).all());
   EXPECT_TRUE(
       (Array2i(7, 4) == limits.GetCellIndex(Vector2f(-0.5f, -0.5f))).all());
+}
+
+TEST(ProbabilityGridTest, GetCellIndexPositionConsistency) {
+  // Create a probability grid with random values.
+  std::mt19937 rng(42);
+  std::uniform_real_distribution<float> value_distribution(-10., 10.);
+  float resolution = 0.05;
+  ProbabilityGrid probability_grid(
+      MapLimits(resolution, Eigen::Vector2d(10., 10.), CellLimits(400, 400)));
+
+  const MapLimits& limits = probability_grid.limits();
+  const CellLimits& cell_limits = limits.cell_limits();
+
+  for (int i = 0; i < 100; ++i) {
+    Vector2f position = {value_distribution(rng), value_distribution(rng)};
+    Array2i index = limits.GetCellIndex(position);
+    Vector2f cell_center = limits.GetCellCenter(index);
+    Vector2f delta = position - cell_center;
+    EXPECT_LE(delta.norm(), M_SQRT1_2 * resolution);
+  }
 }
 
 TEST(ProbabilityGridTest, CorrectCropping) {

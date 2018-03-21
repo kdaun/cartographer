@@ -46,7 +46,10 @@ class TSDF2D : public Grid2D {
 
   float GetWeight(const Eigen::Array2i& cell_index) const;
 
-  float GetCorrespondence(const Eigen::Array2i &cell_index) const override;
+  float GetCorrespondence(const Eigen::Array2i& cell_index) const override;
+  float GetMinCorrespondence() const override;
+  float GetMinAbsCorrespondence() const override;
+  float GetMaxCorrespondence() const override;
 
   bool IsKnown(const Eigen::Array2i& cell_index) const override;
 
@@ -55,7 +58,8 @@ class TSDF2D : public Grid2D {
   proto::Submap2D ToProto() const;
 
  private:
-  std::vector<uint16> tsdf_cells_;  // Highest bit is update marker.
+  float truncation_distance_;
+  std::vector<uint16> tsdf_cells_;    // Highest bit is update marker.
   std::vector<uint16> weight_cells_;  // Highest bit is update marker.
 };
 

@@ -91,7 +91,24 @@ float ProbabilityGrid::GetProbability(const Eigen::Array2i& cell_index) const {
 
 float ProbabilityGrid::GetCorrespondence(
     const Eigen::Array2i &cell_index) const {
-  return 1.f - GetProbability(cell_index);
+  float correspondence =  1.f - GetProbability(cell_index);
+  CHECK_GE(correspondence, GetMinCorrespondence());
+  CHECK_GE(std::abs(correspondence), GetMinAbsCorrespondence());
+  CHECK_LE(correspondence, GetMaxCorrespondence());
+  //todo(kdaun) replace by DCHECK
+  return correspondence;
+}
+
+float ProbabilityGrid::GetMinCorrespondence() const {
+  return 1. - kMaxProbability;
+}
+
+float ProbabilityGrid::GetMinAbsCorrespondence() const {
+  return 1. - kMaxProbability;
+}
+
+float ProbabilityGrid::GetMaxCorrespondence() const {
+  return 1. - kMinProbability;
 }
 
 // Returns true if the probability at the specified index is known.

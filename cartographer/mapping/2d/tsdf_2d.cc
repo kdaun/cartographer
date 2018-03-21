@@ -21,13 +21,17 @@ TSDF2D::TSDF2D(const MapLimits& limits)
     : Grid2D(limits),
       tsdf_cells_(
           limits_.cell_limits().num_x_cells * limits_.cell_limits().num_y_cells,
-          kUnknownTSDFValue) ,
+          kUnknownTSDFValue),
       weight_cells_(
           limits_.cell_limits().num_x_cells * limits_.cell_limits().num_y_cells,
-          kUnknownWeightValue) {}
+          kUnknownWeightValue),
+      truncation_distance_(0.3f) {}
 
 TSDF2D::TSDF2D(const proto::Submap2D& proto)
-    : Grid2D(MapLimits(proto.limits())), tsdf_cells_(), weight_cells_() {
+    : Grid2D(MapLimits(proto.limits())),
+      tsdf_cells_(),
+      weight_cells_(),
+      truncation_distance_(0.3f) {
   LOG(ERROR) << "TSDF2D(const proto::Submap2D& proto) not implemented";
 }
 
@@ -89,13 +93,24 @@ float TSDF2D::GetWeight(const Eigen::Array2i& cell_index) const {
 
 float TSDF2D::GetCorrespondence(
     const Eigen::Array2i &cell_index) const {
-  return GetTSDF(cell_index);
+  float correspondence = GetTSDF(cell_index);
+  CHECK_GE(correspondence, GetMinCorrespondence());
+  CHECK_GE(std::abs(correspondence), GetMinAbsCorrespondence());
+  CHECK_LE(correspondence, GetMaxCorrespondence());
+  //todo(kdaun) replace by DCHECK
+  return correspondence;
 }
+
+float TSDF2D::GetMinCorrespondence() const { return -truncation_distance_; }
+
+float TSDF2D::GetMinAbsCorrespondence() const { return 0.f; }
+
+float TSDF2D::GetMaxCorrespondence() const { return truncation_distance_; }
 
 // Returns true if the probability at the specified index is known.
 bool TSDF2D::IsKnown(const Eigen::Array2i& cell_index) const {
   return limits_.Contains(cell_index) &&
-      tsdf_cells_[ToFlatIndex(cell_index, limits_)] != kUnknownTSDFValue;
+         tsdf_cells_[ToFlatIndex(cell_index, limits_)] != kUnknownTSDFValue;
 }
 
 proto::Submap2D TSDF2D::ToProto() const {

@@ -119,7 +119,7 @@ void RealTimeCorrelativeScanMatcher2D::ScoreCandidates(
           xy_index.x() + candidate.x_index_offset,
           xy_index.y() + candidate.y_index_offset);
       const float probability = 1. -
-          probability_grid.GetCorrespondance(proposed_xy_index); //todo(kdaun)
+          probability_grid.GetCorrespondence(proposed_xy_index); //todo(kdaun)
       // This formulation only works for the probability grid
       candidate.score += probability;
     }

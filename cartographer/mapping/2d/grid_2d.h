@@ -40,7 +40,7 @@ class Grid2D {
   virtual void FinishUpdate() = 0;
 
   // Returns the probability of the cell with 'cell_index'.
-  virtual float GetCorrespondance(const Eigen::Array2i& cell_index) const = 0;
+  virtual float GetCorrespondence(const Eigen::Array2i &cell_index) const = 0;
 
   // Returns true if the probability at the specified index is known.
   virtual bool IsKnown(const Eigen::Array2i& cell_index) const = 0;

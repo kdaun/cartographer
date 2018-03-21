@@ -87,8 +87,8 @@ float TSDF2D::GetWeight(const Eigen::Array2i& cell_index) const {
   return kMaxTSDF;
 }
 
-float TSDF2D::GetCorrespondance(
-    const Eigen::Array2i& cell_index) const {
+float TSDF2D::GetCorrespondence(
+    const Eigen::Array2i &cell_index) const {
   return GetTSDF(cell_index);
 }
 

@@ -87,7 +87,7 @@ class OccupiedSpaceCostFunction2D {
           column >= NumCols() - kPadding) {
         *value = kMinProbability;
       } else {
-        *value = static_cast<double>(probability_grid_.GetCorrespondance(
+        *value = static_cast<double>(probability_grid_.GetCorrespondence(
             Eigen::Array2i(column - kPadding, row - kPadding)));
       }
     }

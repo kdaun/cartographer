@@ -89,8 +89,8 @@ float ProbabilityGrid::GetProbability(const Eigen::Array2i& cell_index) const {
   return kMinProbability;
 }
 
-float ProbabilityGrid::GetCorrespondance(
-    const Eigen::Array2i& cell_index) const {
+float ProbabilityGrid::GetCorrespondence(
+    const Eigen::Array2i &cell_index) const {
   return 1.f - GetProbability(cell_index);
 }
 

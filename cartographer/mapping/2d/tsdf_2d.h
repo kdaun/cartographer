@@ -46,7 +46,7 @@ class TSDF2D : public Grid2D {
 
   float GetWeight(const Eigen::Array2i& cell_index) const;
 
-  float GetCorrespondance(const Eigen::Array2i& cell_index) const override;
+  float GetCorrespondence(const Eigen::Array2i &cell_index) const override;
 
   bool IsKnown(const Eigen::Array2i& cell_index) const override;
 

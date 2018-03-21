@@ -54,7 +54,7 @@ class ProbabilityGrid : public Grid2D {
   // Returns the probability of the cell with 'cell_index'.
   float GetProbability(const Eigen::Array2i& cell_index) const;
 
-  float GetCorrespondance(const Eigen::Array2i& cell_index) const override;
+  float GetCorrespondence(const Eigen::Array2i &cell_index) const override;
 
   bool IsKnown(const Eigen::Array2i& cell_index) const override;
 

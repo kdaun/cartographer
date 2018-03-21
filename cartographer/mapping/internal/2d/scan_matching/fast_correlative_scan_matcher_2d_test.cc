@@ -59,7 +59,8 @@ TEST(PrecomputationGridTest, CorrectValues) {
         for (int x = 0; x != width; ++x) {
           min_score = std::min<float>(
               min_score,
-              probability_grid.GetCorrespondance(xy_index + Eigen::Array2i(x, y)));
+              probability_grid.GetCorrespondence(
+                  xy_index + Eigen::Array2i(x, y)));
         }
       }
       EXPECT_NEAR(min_score,
@@ -93,7 +94,8 @@ TEST(PrecomputationGridTest, TinyProbabilityGrid) {
         for (int x = 0; x != width; ++x) {
           min_score = std::min<float>(
               min_score,
-              probability_grid.GetCorrespondance(xy_index + Eigen::Array2i(x, y)));
+              probability_grid.GetCorrespondence(
+                  xy_index + Eigen::Array2i(x, y)));
         }
       }
       EXPECT_NEAR(min_score,

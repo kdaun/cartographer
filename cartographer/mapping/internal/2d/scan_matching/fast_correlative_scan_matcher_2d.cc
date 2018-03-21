@@ -105,26 +105,26 @@ PrecomputationGrid2D::PrecomputationGrid2D(
   for (int y = 0; y != limits.num_y_cells; ++y) {
     SlidingWindowMinimum current_values;
     current_values.AddValue(
-        grid.GetCorrespondance(Eigen::Array2i(0, y)));
+        std::abs(grid.GetCorrespondence(Eigen::Array2i(0, y))));
     for (int x = -width + 1; x != 0; ++x) {
       intermediate[x + width - 1 + y * stride] = current_values.GetMinimum();
       if (x + width < limits.num_x_cells) {
         current_values.AddValue(
-            grid.GetCorrespondance(Eigen::Array2i(x + width, y)));
+            std::abs(grid.GetCorrespondence(Eigen::Array2i(x + width, y))));
       }
     }
     for (int x = 0; x < limits.num_x_cells - width; ++x) {
       intermediate[x + width - 1 + y * stride] = current_values.GetMinimum();
       current_values.RemoveValue(
-          grid.GetCorrespondance(Eigen::Array2i(x, y)));
+          std::abs(grid.GetCorrespondence(Eigen::Array2i(x, y))));
       current_values.AddValue(
-          grid.GetCorrespondance(Eigen::Array2i(x + width, y)));
+          std::abs(grid.GetCorrespondence(Eigen::Array2i(x + width, y))));
     }
     for (int x = std::max(limits.num_x_cells - width, 0);
          x != limits.num_x_cells; ++x) {
       intermediate[x + width - 1 + y * stride] = current_values.GetMinimum();
       current_values.RemoveValue(
-          grid.GetCorrespondance(Eigen::Array2i(x, y)));
+          std::abs(grid.GetCorrespondence(Eigen::Array2i(x, y))));
     }
     current_values.CheckIsEmpty();
   }

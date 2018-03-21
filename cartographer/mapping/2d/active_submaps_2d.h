@@ -23,6 +23,7 @@
 #include "cartographer/mapping/2d/map_limits.h"
 #include "cartographer/mapping/2d/proto/submaps_options_2d.pb.h"
 #include "cartographer/mapping/2d/range_data_inserter_2d_probability_grid.h"
+#include "cartographer/mapping/2d/range_data_inserter_2d_tsdf.h"
 #include "cartographer/mapping/2d/submap_2d.h"
 #include "cartographer/mapping/proto/serialization.pb.h"
 #include "cartographer/mapping/proto/submap_visualization.pb.h"
@@ -67,6 +68,8 @@ class ActiveSubmaps2D {
   const proto::SubmapsOptions2D options_;
   std::shared_ptr<RangeDataInserter2DProbabilityGrid>
       range_data_inserter_probability_grid_;
+  std::shared_ptr<RangeDataInserter2DTSDF>
+      range_data_inserter_tsdf_;
   int matching_submap_index_ = 0;
 };
 

@@ -63,6 +63,7 @@ TRAJECTORY_BUILDER_2D = {
 
   submaps = {
     resolution = 0.05,
+    map_type = "PROBABILITY_GRID",
     num_range_data = 90,
     range_data_inserter = {
       insert_free_space = true,

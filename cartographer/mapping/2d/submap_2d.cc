@@ -34,6 +34,11 @@ proto::SubmapsOptions2D CreateSubmapsOptions2D(
     common::LuaParameterDictionary* const parameter_dictionary) {
   proto::SubmapsOptions2D options;
   options.set_resolution(parameter_dictionary->GetDouble("resolution"));
+  const std::string map_type_string = parameter_dictionary->GetString("map_type");
+  proto::MapType map_type;
+  CHECK(proto::MapType_Parse(map_type_string, &map_type))
+  << "Unknown MapType kind: " << map_type_string;
+  options.set_map_type(map_type);
   options.set_num_range_data(
       parameter_dictionary->GetNonNegativeInt("num_range_data"));
   *options.mutable_range_data_inserter_options() =

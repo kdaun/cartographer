@@ -23,6 +23,7 @@
 #include "cartographer/common/lua_parameter_dictionary.h"
 #include "cartographer/common/port.h"
 #include "cartographer/mapping/2d/proto/range_data_inserter_options_2d.pb.h"
+#include "cartographer/mapping/2d/range_data_inserter_2d_probability_grid.h" //TODO(kdaun) remove after options are split up
 #include "cartographer/mapping/2d/tsdf_2d.h"
 #include "cartographer/mapping/2d/xy_index.h"
 #include "cartographer/sensor/point_cloud.h"
@@ -30,9 +31,6 @@
 
 namespace cartographer {
 namespace mapping {
-
-proto::RangeDataInserterOptions2D CreateRangeDataInserterOptions2D(
-    common::LuaParameterDictionary* parameter_dictionary);
 
 class RangeDataInserter2DTSDF {
  public:

@@ -18,9 +18,16 @@ import "cartographer/mapping/2d/proto/range_data_inserter_options_2d.proto";
 
 package cartographer.mapping.proto;
 
+enum MapType {
+  PROBABILITY_GRID = 0;
+  TSDF = 1;
+}
+
 message SubmapsOptions2D {
   // Resolution of the map in meters.
   double resolution = 1;
+  
+  MapType map_type = 2;
 
   // Number of range data before adding a new submap. Each submap will get twice
   // the number of range data inserted: First for initialization without being

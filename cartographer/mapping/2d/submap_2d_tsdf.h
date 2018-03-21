@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef CARTOGRAPHER_MAPPING_2D_SUBMAP_2D__PROBABILITY_GRID_H_
-#define CARTOGRAPHER_MAPPING_2D_SUBMAP_2D__PROBABILITY_GRID_H_
+#ifndef CARTOGRAPHER_MAPPING_2D_SUBMAP_2D_TSDF_H_
+#define CARTOGRAPHER_MAPPING_2D_SUBMAP_2D_TSDF_H_
 
 #include <memory>
 #include <vector>
@@ -67,4 +67,4 @@ class Submap2DTSDF : public Submap2D {
 }  // namespace mapping
 }  // namespace cartographer
 
-#endif  // CARTOGRAPHER_MAPPING_2D_SUBMAP_2D__PROBABILITY_GRID_H_
+#endif  // CARTOGRAPHER_MAPPING_2D_SUBMAP_2D_TSDF_H_

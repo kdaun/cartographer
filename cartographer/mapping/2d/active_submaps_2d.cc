@@ -27,15 +27,22 @@
 #include "cartographer/common/port.h"
 #include "glog/logging.h"
 #include "submap_2d_probability_grid.h"
+#include "submap_2d_tsdf.h"
 
 namespace cartographer {
 namespace mapping {
 
 ActiveSubmaps2D::ActiveSubmaps2D(const proto::SubmapsOptions2D& options)
-    : options_(options),
-      range_data_inserter_probability_grid_(
-          std::make_shared<RangeDataInserter2DProbabilityGrid>(
-              options.range_data_inserter_options())) {
+    : options_(options) {
+  if(options.map_type() == proto::MapType::PROBABILITY_GRID) {
+    range_data_inserter_probability_grid_ =
+        std::make_shared<RangeDataInserter2DProbabilityGrid>(
+            options.range_data_inserter_options());
+  }else if(options.map_type() == proto::MapType::TSDF) {
+    range_data_inserter_tsdf_ =
+        std::make_shared<RangeDataInserter2DTSDF>(
+            options.range_data_inserter_options());
+  }
   // We always want to have at least one likelihood field which we can return,
   // and will create it at the origin in absence of a better choice.
   AddSubmap(Eigen::Vector2f::Zero());
@@ -70,15 +77,28 @@ void ActiveSubmaps2D::AddSubmap(const Eigen::Vector2f& origin) {
     FinishSubmap();
   }
   constexpr int kInitialSubmapSize = 100;
-  submaps_.push_back(common::make_unique<Submap2DProbabilityGrid>(
-      MapLimits(options_.resolution(),
-                origin.cast<double>() + 0.5 * kInitialSubmapSize *
-                                            options_.resolution() *
-                                            Eigen::Vector2d::Ones(),
-                CellLimits(kInitialSubmapSize, kInitialSubmapSize)),
-      origin,
-      range_data_inserter_probability_grid_));  // TODO(kdaun) check
-                                                // submap type
+
+  if(options_.map_type() == proto::MapType::PROBABILITY_GRID) {
+    submaps_.push_back(common::make_unique<Submap2DProbabilityGrid>(
+        MapLimits(options_.resolution(),
+                  origin.cast<double>() + 0.5 * kInitialSubmapSize *
+                      options_.resolution() *
+                      Eigen::Vector2d::Ones(),
+                  CellLimits(kInitialSubmapSize, kInitialSubmapSize)),
+        origin,
+        range_data_inserter_probability_grid_));
+  }
+  else
+  if(options_.map_type() == proto::MapType::TSDF) {
+    submaps_.push_back(common::make_unique<Submap2DTSDF>(
+        MapLimits(options_.resolution(),
+                  origin.cast<double>() + 0.5 * kInitialSubmapSize *
+                      options_.resolution() *
+                      Eigen::Vector2d::Ones(),
+                  CellLimits(kInitialSubmapSize, kInitialSubmapSize)),
+        origin,
+        range_data_inserter_tsdf_));}
+
 
   LOG(INFO) << "Added submap " << matching_submap_index_ + submaps_.size();
 }

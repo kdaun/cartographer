@@ -28,22 +28,6 @@
 namespace cartographer {
 namespace mapping {
 
-proto::RangeDataInserterOptions2D CreateRangeDataInserterOptions2D(
-    common::LuaParameterDictionary* const parameter_dictionary) {
-  proto::RangeDataInserterOptions2D options;
-  options.set_hit_probability(
-      parameter_dictionary->GetDouble("hit_probability"));
-  options.set_miss_probability(
-      parameter_dictionary->GetDouble("miss_probability"));
-  options.set_insert_free_space(
-      parameter_dictionary->HasKey("insert_free_space")
-          ? parameter_dictionary->GetBool("insert_free_space")
-          : true);
-  CHECK_GT(options.hit_probability(), 0.5);
-  CHECK_LT(options.miss_probability(), 0.5);
-  return options;
-}
-
 RangeDataInserter2DTSDF::RangeDataInserter2DTSDF(
     const proto::RangeDataInserterOptions2D& options)
     : options_(options) {}

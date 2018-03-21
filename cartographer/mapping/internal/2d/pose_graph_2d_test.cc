@@ -52,6 +52,7 @@ class PoseGraph2DTest : public ::testing::Test {
       auto parameter_dictionary = common::MakeDictionary(R"text(
           return {
             resolution = 0.05,
+            map_type = "PROBABILITY_GRID",
             num_range_data = 1,
             range_data_inserter = {
               insert_free_space = true,

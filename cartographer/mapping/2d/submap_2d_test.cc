@@ -38,6 +38,7 @@ TEST(Submap2DTest, TheRightNumberOfRangeDataAreInserted) {
   auto parameter_dictionary = common::MakeDictionary(
       "return {"
       "resolution = 0.05, "
+      "map_type = \"PROBABILITY_GRID\", "
       "num_range_data = " +
       std::to_string(kNumRangeData) +
       ", "

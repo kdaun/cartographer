@@ -23,10 +23,10 @@
 #include "Eigen/Core"
 #include "cartographer/common/lua_parameter_dictionary.h"
 #include "cartographer/mapping/2d/map_limits.h"
-#include "cartographer/mapping/2d/probability_grid.h"
 #include "cartographer/mapping/2d/proto/submaps_options_2d.pb.h"
-#include "cartographer/mapping/2d/range_data_inserter_2d_probability_grid.h"
+#include "cartographer/mapping/2d/range_data_inserter_2d_tsdf.h"
 #include "cartographer/mapping/2d/submap_2d.h"
+#include "cartographer/mapping/2d/tsdf_2d.h"
 #include "cartographer/mapping/proto/serialization.pb.h"
 #include "cartographer/mapping/proto/submap_visualization.pb.h"
 #include "cartographer/mapping/submaps.h"
@@ -37,15 +37,13 @@
 namespace cartographer {
 namespace mapping {
 
-ProbabilityGrid ComputeCroppedProbabilityGrid(
-    const ProbabilityGrid& probability_grid);
+TSDF2D ComputeCroppedTSDF2D(const TSDF2D& tsdf);
 
-class Submap2DProbabilityGrid : public Submap2D {
+class Submap2DTSDF : public Submap2D {
  public:
-  Submap2DProbabilityGrid(
-      const MapLimits& limits, const Eigen::Vector2f& origin,
-      std::shared_ptr<RangeDataInserter2DProbabilityGrid> range_data_inserter);
-  explicit Submap2DProbabilityGrid(const proto::Submap& proto);
+  Submap2DTSDF(const MapLimits& limits, const Eigen::Vector2f& origin,
+               std::shared_ptr<RangeDataInserter2DTSDF> range_data_inserter);
+  explicit Submap2DTSDF(const proto::Submap& proto);
 
   void ToProto(proto::Submap* proto,
                bool include_probability_grid_data) const override;
@@ -54,7 +52,7 @@ class Submap2DProbabilityGrid : public Submap2D {
   void ToResponseProto(const transform::Rigid3d& global_submap_pose,
                        proto::SubmapQuery::Response* response) const override;
 
-  const ProbabilityGrid& grid() const override { return probability_grid_; }
+  const TSDF2D& grid() const override { return tsdf_; }
 
   // Insert 'range_data' into this submap using 'range_data_inserter'. The
   // submap must not be finished yet.
@@ -62,8 +60,8 @@ class Submap2DProbabilityGrid : public Submap2D {
   void Finish() override;
 
  private:
-  ProbabilityGrid probability_grid_;
-  std::shared_ptr<RangeDataInserter2DProbabilityGrid> range_data_inserter_;
+  TSDF2D tsdf_;
+  std::shared_ptr<RangeDataInserter2DTSDF> range_data_inserter_;
 };
 
 }  // namespace mapping

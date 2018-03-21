@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "cartographer/mapping/2d/range_data_inserter_2d.h"
+#include "cartographer/mapping/2d/range_data_inserter_2d_probability_grid.h"
 
 #include <cstdlib>
 

@@ -34,20 +34,43 @@ TSDF2D::TSDF2D(const proto::Submap2D& proto)
 // Finishes the update sequence.
 void TSDF2D::FinishUpdate() {
   while (!update_indices_.empty()) {
-    DCHECK_GE(cells_[update_indices_.back()], kUpdateMarker);
+    DCHECK_GE(tsdf_cells_[update_indices_.back()], kUpdateMarker);
     tsdf_cells_[update_indices_.back()] -= kUpdateMarker;
+    DCHECK_GE(weight_cells_[update_indices_.back()], kUpdateMarker);
+    weight_cells_[update_indices_.back()] -= kUpdateMarker;
     update_indices_.pop_back();
   }
 }
 
-void TSDF2D::SetCell(const Eigen::Array2i& cell_index,
-             const float TSDF, const float weight) {
+void TSDF2D::SetCell(const Eigen::Array2i& cell_index, const float tsdf,
+                     const float weight) {
   uint16& cell_tsdf = tsdf_cells_[ToFlatIndex(cell_index, limits_)];
-  //CHECK_EQ(cell, kUnknownProbabilityValue);
-  cell_tsdf = TSDFToValue(TSDF);
+  // CHECK_EQ(cell, kUnknownProbabilityValue);
+  cell_tsdf = TSDFToValue(tsdf);
   uint16& cell_weight = weight_cells_[ToFlatIndex(cell_index, limits_)];
-  cell_weight = WeightToValue(TSDF);
+  cell_weight = WeightToValue(weight);
   known_cells_box_.extend(cell_index.matrix());
+}
+
+bool TSDF2D::UpdateCell(const Eigen::Array2i& cell_index,
+                        const float update_tsdf, const float update_weight) {
+  const int flat_index = ToFlatIndex(cell_index, limits_);
+  uint16* tsdf_cell = &tsdf_cells_[flat_index];
+  uint16* weight_cell = &weight_cells_[flat_index];
+  if (*tsdf_cell >= kUpdateMarker) {
+    return false;
+  }
+  update_indices_.push_back(flat_index);
+  float current_tsdf = ValueToTSDF(*tsdf_cell);
+  float current_weight = ValueToWeight(*weight_cell);
+  current_tsdf = (current_weight * current_tsdf + update_tsdf * update_weight) /
+                 (current_weight + update_weight);
+  current_weight += update_weight;
+  *tsdf_cell = TSDFToValue(current_tsdf) + kUpdateMarker;
+  *weight_cell = WeightToValue(current_weight);
+  DCHECK_GE(*tsdf_cell, kUpdateMarker);
+  known_cells_box_.extend(cell_index.matrix());
+  return true;
 }
 
 float TSDF2D::GetTSDF(const Eigen::Array2i& cell_index) const {

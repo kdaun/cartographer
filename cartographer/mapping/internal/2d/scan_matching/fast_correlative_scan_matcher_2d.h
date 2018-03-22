@@ -79,7 +79,7 @@ class PrecomputationGrid2D {
   }
 
  private:
-  uint8 ComputeCellValue(float probability) const;
+  uint8 ComputeCellValue(float correspondence, const Grid2D& grid) const;
 
   // Offset of the precomputation grid in relation to the 'grid'
   // including the additional 'width' - 1 cells.

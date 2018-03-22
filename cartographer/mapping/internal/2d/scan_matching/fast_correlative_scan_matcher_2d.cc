@@ -136,31 +136,34 @@ PrecomputationGrid2D::PrecomputationGrid2D(
     current_values.AddValue(intermediate[x]);
     for (int y = -width + 1; y != 0; ++y) {
       cells_[x + (y + width - 1) * stride] =
-          ComputeCellValue(current_values.GetMinimum());
+          ComputeCellValue(current_values.GetMinimum(), grid);
       if (y + width < limits.num_y_cells) {
         current_values.AddValue(intermediate[x + (y + width) * stride]);
       }
     }
     for (int y = 0; y < limits.num_y_cells - width; ++y) {
       cells_[x + (y + width - 1) * stride] =
-          ComputeCellValue(current_values.GetMinimum());
+          ComputeCellValue(current_values.GetMinimum(), grid);
       current_values.RemoveValue(intermediate[x + y * stride]);
       current_values.AddValue(intermediate[x + (y + width) * stride]);
     }
     for (int y = std::max(limits.num_y_cells - width, 0);
          y != limits.num_y_cells; ++y) {
       cells_[x + (y + width - 1) * stride] =
-          ComputeCellValue(current_values.GetMinimum());
+          ComputeCellValue(current_values.GetMinimum(), grid);
       current_values.RemoveValue(intermediate[x + y * stride]);
     }
     current_values.CheckIsEmpty();
   }
 }
 
-uint8 PrecomputationGrid2D::ComputeCellValue(const float probability) const { //TODO(kdaun) check how this behaves for tsdf
-  const int cell_value =
-      common::RoundToInt((probability - kMinProbability) *
-                         (255.f / (kMaxProbability - kMinProbability)));
+uint8 PrecomputationGrid2D::ComputeCellValue(
+    const float correspondence,
+    const Grid2D& grid) const {  // TODO(kdaun) check how this behaves for tsdf
+  CHECK_GE(correspondence, 0.);
+  const int cell_value = common::RoundToInt(
+      (correspondence - grid.GetMinAbsCorrespondence()) *
+      (255.f / (grid.GetMaxCorrespondence() - grid.GetMinAbsCorrespondence())));
   CHECK_GE(cell_value, 0);
   CHECK_LE(cell_value, 255);
   return cell_value;

@@ -58,9 +58,9 @@ class TSDF2D : public Grid2D {
   proto::Submap2D ToProto() const;
 
  private:
-  float truncation_distance_;
   std::vector<uint16> tsdf_cells_;    // Highest bit is update marker.
   std::vector<uint16> weight_cells_;  // Highest bit is update marker.
+  float truncation_distance_;
 };
 
 }  // namespace mapping

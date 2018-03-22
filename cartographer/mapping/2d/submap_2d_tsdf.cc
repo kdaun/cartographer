@@ -102,14 +102,25 @@ void Submap2DTSDF::ToResponseProto(
       // zero, and use 'alpha' to subtract. This is only correct when the pixel
       // is currently white, so walls will look too gray. This should be hard to
       // detect visually for the user, though.
-      const int delta =
-          128 - ProbabilityToLogOddsInteger(tsdf_.GetTSDF(
-                    xy_index + offset));  // todo(kdaun) come up with something
-                                          // reasonable for TSDF
-      const uint8 alpha = delta > 0 ? 0 : -delta;
-      const uint8 value = delta > 0 ? delta : 0;
+      float tsdf = tsdf_.GetTSDF(xy_index + offset);
+      int val = 0;
+      if(tsdf >= 0.) {
+        val = tsdf_.GetTSDF(xy_index + offset) * 127. /
+            0.3;
+      }
+      else {
+
+        val = 255 - tsdf_.GetTSDF(xy_index + offset) * 127. /
+            0.3;
+      }
+      const int delta = 128 + tsdf_.GetTSDF(xy_index + offset) * 100. /
+                                  0.3;  // todo(kdaun) come up with something
+                                        // reasonable for TSDF
+      const uint8 alpha = 1;//delta > 0 ? 0 : -delta;
+      const uint8 value = val; // delta > 0 ? delta : 0;
       cells.push_back(value);
-      cells.push_back((value || alpha) ? alpha : 1);
+      //cells.push_back((value || alpha) ? alpha : 1);
+      cells.push_back(1);
     } else {
       constexpr uint8 kUnknownLogOdds = 0;
       cells.push_back(static_cast<uint8>(kUnknownLogOdds));  // value

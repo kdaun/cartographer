@@ -96,31 +96,11 @@ void Submap2DTSDF::ToResponseProto(
   std::string cells;
   for (const Eigen::Array2i& xy_index : XYIndexRangeIterator(limits)) {
     if (tsdf_.IsKnown(xy_index + offset)) {
-      // We would like to add 'delta' but this is not possible using a value and
-      // alpha. We use premultiplied alpha, so when 'delta' is positive we can
-      // add it by setting 'alpha' to zero. If it is negative, we set 'value' to
-      // zero, and use 'alpha' to subtract. This is only correct when the pixel
-      // is currently white, so walls will look too gray. This should be hard to
-      // detect visually for the user, though.
-      float tsdf = tsdf_.GetTSDF(xy_index + offset);
-      int val = 0;
-      if(tsdf >= 0.) {
-        val = tsdf_.GetTSDF(xy_index + offset) * 127. /
-            0.3;
-      }
-      else {
-
-        val = 255 - tsdf_.GetTSDF(xy_index + offset) * 127. /
-            0.3;
-      }
-      const int delta = 128 + tsdf_.GetTSDF(xy_index + offset) * 100. /
-                                  0.3;  // todo(kdaun) come up with something
-                                        // reasonable for TSDF
-      const uint8 alpha = 1;//delta > 0 ? 0 : -delta;
-      const uint8 value = val; // delta > 0 ? delta : 0;
+      //TODO(kdaun) fix alpha rendering
+      const uint8 alpha = 0;
+      const uint8 value = std::abs(tsdf_.GetTSDF(xy_index + offset))/0.3 * 255;
       cells.push_back(value);
-      //cells.push_back((value || alpha) ? alpha : 1);
-      cells.push_back(1);
+      cells.push_back((value || alpha) ? alpha : 1);
     } else {
       constexpr uint8 kUnknownLogOdds = 0;
       cells.push_back(static_cast<uint8>(kUnknownLogOdds));  // value

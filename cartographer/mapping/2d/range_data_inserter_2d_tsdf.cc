@@ -36,16 +36,28 @@ void RangeDataInserter2DTSDF::Insert(const sensor::RangeData& range_data,
                                      TSDF2D* const tsdf) const {
   const float tau = 0.3;
   const float update_weight = 1.f / (2.f * tau);
-  const Eigen::Array2i origin_cell =
-      tsdf->limits().GetCellIndex(range_data.origin.head<2>());
 
   for (const Eigen::Vector3f& hit : range_data.returns) {
     const Eigen::Vector3f direction = (hit - range_data.origin).normalized();
     const Eigen::Vector3f end_position = hit + tau * direction;
     const Eigen::Array2i end_cell =
         tsdf->limits().GetCellIndex(end_position.head<2>());
+    Eigen::AlignedBox2f bounding_box(range_data.origin.head<2>());
+    bounding_box.extend(end_position.head<2>());
+    constexpr float kPadding = 1e-6f;
+    tsdf->GrowLimits(bounding_box.min() - kPadding * Eigen::Vector2f::Ones());
+    tsdf->GrowLimits(bounding_box.max() + kPadding * Eigen::Vector2f::Ones());
+  }
 
-    const Eigen::Array2i delta = end_cell - origin_cell;
+  const Eigen::Vector2f origin = range_data.origin.head<2>();
+  const Eigen::Array2i origin_cell = tsdf->limits().GetCellIndex(origin);
+  for (const Eigen::Vector3f& hit_3d : range_data.returns) {
+    const Eigen::Vector2f hit = hit_3d.head<2>();
+    const Eigen::Vector2f direction = (hit - origin).normalized();
+    const Eigen::Vector2f end_position = hit + tau * direction;
+    const Eigen::Array2i end_cell = tsdf->limits().GetCellIndex(end_position);
+    const Eigen::Array2i delta =
+        end_cell - origin_cell;  // todo(kdaun) remove code duplication
     const int num_samples = delta.cwiseAbs().maxCoeff();
     CHECK_LT(num_samples, 1 << 15);
     // 'num_samples' is the number of samples we equi-distantly place on the
@@ -57,13 +69,18 @@ void RangeDataInserter2DTSDF::Insert(const sensor::RangeData& range_data,
     for (int position = 0; position < num_samples; ++position) {
       const Eigen::Array2i cell = origin_cell + delta * position / num_samples;
       float resolution = tsdf->limits().resolution();
-      const Eigen::Vector3f cell_position = {resolution * cell[0],
-                                             resolution * cell[1], 0.f};
+      const Eigen::Vector2f cell_position = tsdf->limits().GetCellCenter(cell);
       float distance = (hit - cell_position).dot(direction);
       if (distance > tau) {
         distance = tau;
       } else if (distance < -tau) {
-        LOG(INFO) << "distance " << distance;
+        LOG(INFO) << "\n\ndirection:\n " << direction
+                  << "\nrange_data.origin:\n " << range_data.origin
+                  << "\nhit:\n " << hit << "\nend_position:\n " << end_position
+                  << "\ncell_position:\n " << cell_position << "\ndistance:\n "
+                  << distance << "\norigin_cell:\n " << origin_cell
+                  << "\nend_cell:\n " << end_cell << "\ncurrent_cell:\n "
+                  << cell;
         distance = -tau;
       }
       tsdf->UpdateCell(cell, distance, update_weight);

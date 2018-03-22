@@ -31,7 +31,7 @@ constexpr float kMinTSDF = -0.3f;
 constexpr float kMaxTSDF = -kMinTSDF;
 
 constexpr float kMinWeight = 0.0f;
-constexpr float kMaxWeight = 1.0;
+constexpr float kMaxWeight = 100.0f;
 
 // Clamps probability to be in the range [kMinTSDF, kMaxTSDF].
 inline float ClampTSDF(const float tsdf) {

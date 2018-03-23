@@ -35,7 +35,7 @@ RangeDataInserter2DTSDF::RangeDataInserter2DTSDF(
 void RangeDataInserter2DTSDF::Insert(const sensor::RangeData& range_data,
                                      TSDF2D* const tsdf) const {
   const float tau = 0.3;
-  const float update_weight = 1.f / (2.f * tau);
+  const float update_weight = 1.0f / (15.f * tau);
 
   for (const Eigen::Vector3f& hit : range_data.returns) {
     const Eigen::Vector3f direction = (hit - range_data.origin).normalized();
@@ -64,8 +64,7 @@ void RangeDataInserter2DTSDF::Insert(const sensor::RangeData& range_data,
     // line between 'origin' and 'hit'. (including a fractional part for sub-
     // voxels) It is chosen so that between two samples we change from one voxel
     // to the next on the fastest changing dimension.
-    //
-    // Only the last 'num_free_space_voxels' are updated for performance.
+
     for (int position = 0; position < num_samples; ++position) {
       const Eigen::Array2i cell = origin_cell + delta * position / num_samples;
       float resolution = tsdf->limits().resolution();

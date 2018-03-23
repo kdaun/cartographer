@@ -62,19 +62,30 @@ bool TSDF2D::UpdateCell(const Eigen::Array2i& cell_index,
   uint16* tsdf_cell = &tsdf_cells_[flat_index];
   uint16* weight_cell = &weight_cells_[flat_index];
   if (*tsdf_cell >= kUpdateMarker) {
+    float current_tsdf = ValueToTSDF(*tsdf_cell - kUpdateMarker);
+    float current_weight = ValueToWeight(*weight_cell);
+    current_tsdf =
+        (current_weight * current_tsdf + update_tsdf * update_weight) /
+        (current_weight + update_weight);
+    current_weight += update_weight;
+    *tsdf_cell = TSDFToValue(current_tsdf) + kUpdateMarker;
+    *weight_cell = WeightToValue(current_weight);
     return false;
+  } else {
+    update_indices_.push_back(flat_index);
+    float current_tsdf = ValueToTSDF(*tsdf_cell);
+    float current_weight =
+        ValueToWeight(*weight_cell);  // TODO(kdaun) remove code duplication
+    current_tsdf =
+        (current_weight * current_tsdf + update_tsdf * update_weight) /
+        (current_weight + update_weight);
+    current_weight += update_weight;
+    *tsdf_cell = TSDFToValue(current_tsdf) + kUpdateMarker;
+    *weight_cell = WeightToValue(current_weight);
+    DCHECK_GE(*tsdf_cell, kUpdateMarker);
+    known_cells_box_.extend(cell_index.matrix());
+    return true;
   }
-  update_indices_.push_back(flat_index);
-  float current_tsdf = ValueToTSDF(*tsdf_cell);
-  float current_weight = ValueToWeight(*weight_cell);
-  current_tsdf = (current_weight * current_tsdf + update_tsdf * update_weight) /
-                 (current_weight + update_weight);
-  current_weight += update_weight;
-  *tsdf_cell = TSDFToValue(current_tsdf) + kUpdateMarker;
-  *weight_cell = WeightToValue(current_weight);
-  DCHECK_GE(*tsdf_cell, kUpdateMarker);
-  known_cells_box_.extend(cell_index.matrix());
-  return true;
 }
 
 float TSDF2D::GetTSDF(const Eigen::Array2i& cell_index) const {

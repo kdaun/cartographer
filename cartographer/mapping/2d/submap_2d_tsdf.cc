@@ -96,9 +96,18 @@ void Submap2DTSDF::ToResponseProto(
   std::string cells;
   for (const Eigen::Array2i& xy_index : XYIndexRangeIterator(limits)) {
     if (tsdf_.IsKnown(xy_index + offset)) {
-      //TODO(kdaun) fix alpha rendering
-      const uint8 alpha = 0;
-      const uint8 value = std::abs(tsdf_.GetTSDF(xy_index + offset))/0.3 * 255;
+      // We would like to add 'delta' but this is not possible using a value and
+      // alpha. We use premultiplied alpha, so when 'delta' is positive we can
+      // add it by setting 'alpha' to zero. If it is negative, we set 'value' to
+      // zero, and use 'alpha' to subtract. This is only correct when the pixel
+      // is currently white, so walls will look too gray. This should be hard to
+      // detect visually for the user, though.
+      float reshaped_tsdf = std::abs(tsdf_.GetTSDF(xy_index + offset));
+      reshaped_tsdf = std::pow(reshaped_tsdf/0.3,1./2.);
+      const int delta =
+          reshaped_tsdf * 255. - 128.;
+      const uint8 alpha = delta > 0 ? 0 : -delta;
+      const uint8 value = delta > 0 ? delta : 0;
       cells.push_back(value);
       cells.push_back((value || alpha) ? alpha : 1);
     } else {

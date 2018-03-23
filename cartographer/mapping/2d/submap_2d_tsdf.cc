@@ -49,16 +49,11 @@ TSDF2D ComputeCroppedTSDF2D(const TSDF2D& tsdf) {
   return cropped_grid;
 }
 
-Submap2DTSDF::Submap2DTSDF(
-    const MapLimits& limits, const Eigen::Vector2f& origin,
-    std::shared_ptr<RangeDataInserter2DTSDF> range_data_inserter)
-    : Submap2D(limits, origin),
-      tsdf_(limits),
-      range_data_inserter_(range_data_inserter) {}
+Submap2DTSDF::Submap2DTSDF(const MapLimits& limits,
+                           const Eigen::Vector2f& origin)
+    : Submap2D(limits, origin), tsdf_(limits) {}
 
-Submap2DTSDF::Submap2DTSDF(
-    const proto::Submap&
-        proto)  // todo(kdaun) discuss how to handle range_data_inserter here
+Submap2DTSDF::Submap2DTSDF(const proto::Submap& proto)
     : Submap2D(proto), tsdf_(TSDF2D(proto.submap_2d())) {}
 
 void Submap2DTSDF::ToProto(proto::Submap* const proto,
@@ -133,9 +128,11 @@ void Submap2DTSDF::ToResponseProto(
       transform::Rigid3d::Translation(Eigen::Vector3d(max_x, max_y, 0.)));
 }
 
-void Submap2DTSDF::InsertRangeData(const sensor::RangeData& range_data) {
+void Submap2DTSDF::InsertRangeData(
+    const sensor::RangeData& range_data,
+    const RangeDataInserter2DTSDF& range_data_inserter) {
   CHECK(!finished());
-  range_data_inserter_->Insert(range_data, &tsdf_);
+  range_data_inserter.Insert(range_data, &tsdf_);
   SetNumRangeData(num_range_data() + 1);
 }
 

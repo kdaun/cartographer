@@ -89,25 +89,24 @@ float ProbabilityGrid::GetProbability(const Eigen::Array2i& cell_index) const {
   return kMinProbability;
 }
 
-float ProbabilityGrid::GetCorrespondence(
-    const Eigen::Array2i &cell_index) const {
-  float correspondence =  1.f - GetProbability(cell_index);
-  CHECK_GE(correspondence, GetMinCorrespondence());
-  CHECK_GE(std::abs(correspondence), GetMinAbsCorrespondence());
-  CHECK_LE(correspondence, GetMaxCorrespondence());
-  //todo(kdaun) replace by DCHECK
-  return correspondence;
+float ProbabilityGrid::GetCorrespondenceCost(
+    const Eigen::Array2i& cell_index) const {
+  float correspondence_cost = 1.f - GetProbability(cell_index);
+  DCHECK_GE(correspondence_cost, GetMinCorrespondenceCost());
+  DCHECK_GE(std::abs(correspondence_cost), GetMinAbsCorrespondenceCost());
+  DCHECK_LE(correspondence_cost, GetMaxCorrespondenceCost());
+  return correspondence_cost;
 }
 
-float ProbabilityGrid::GetMinCorrespondence() const {
+float ProbabilityGrid::GetMinCorrespondenceCost() const {
   return 1. - kMaxProbability;
 }
 
-float ProbabilityGrid::GetMinAbsCorrespondence() const {
+float ProbabilityGrid::GetMinAbsCorrespondenceCost() const {
   return 1. - kMaxProbability;
 }
 
-float ProbabilityGrid::GetMaxCorrespondence() const {
+float ProbabilityGrid::GetMaxCorrespondenceCost() const {
   return 1. - kMinProbability;
 }
 

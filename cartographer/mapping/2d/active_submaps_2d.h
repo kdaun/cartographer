@@ -32,6 +32,19 @@
 #include "cartographer/sensor/range_data.h"
 #include "cartographer/transform/rigid_transform.h"
 
+#include <cinttypes>
+#include <cmath>
+#include <cstdlib>
+#include <fstream>
+#include <limits>
+
+#include "Eigen/Geometry"
+#include "cartographer/common/make_unique.h"
+#include "cartographer/common/port.h"
+#include "glog/logging.h"
+#include "submap_2d_probability_grid.h"
+#include "submap_2d_tsdf.h"
+
 namespace cartographer {
 namespace mapping {
 
@@ -46,30 +59,84 @@ namespace mapping {
 // "new" submap gets created. The "old" submap is forgotten by this object.
 class ActiveSubmaps2D {
  public:
-  explicit ActiveSubmaps2D(const proto::SubmapsOptions2D& options);
+  // explicit ActiveSubmaps2D(const proto::SubmapsOptions2D& options);
 
-  ActiveSubmaps2D(const ActiveSubmaps2D&) = delete;
+  // ActiveSubmaps2D(const ActiveSubmaps2D&) = delete;
   ActiveSubmaps2D& operator=(const ActiveSubmaps2D&) = delete;
 
   // Returns the index of the newest initialized Submap which can be
   // used for scan-to-map matching.
-  int matching_index() const;
+  virtual int matching_index() const = 0;
 
   // Inserts 'range_data' into the Submap collection.
-  void InsertRangeData(const sensor::RangeData& range_data);
+  virtual void InsertRangeData(const sensor::RangeData& range_data) = 0;
 
-  std::vector<std::shared_ptr<Submap2D>> submaps() const;
+  virtual std::vector<std::shared_ptr<Submap2D>> submaps() const = 0;
+};
+
+template <typename Submap2DType, typename RangeDataInserter2DType>
+class ActiveSubmaps2DI : public ActiveSubmaps2D {
+ public:
+  explicit ActiveSubmaps2DI(const proto::SubmapsOptions2D& options)
+      : options_(options),
+        range_data_inserter_(options.range_data_inserter_options()) {
+    // We always want to have at least one likelihood field which we can return,
+    // and will create it at the origin in absence of a better choice.
+    AddSubmap(Eigen::Vector2f::Zero());
+  }
+
+  ActiveSubmaps2DI(const ActiveSubmaps2DI&) = delete;
+  ActiveSubmaps2DI& operator=(const ActiveSubmaps2DI&) = delete;
+  // Returns the index of the newest initialized Submap which can be
+  // used for scan-to-map matching.
+  int matching_index() const { return matching_submap_index_; };
+
+  // Inserts 'range_data' into the Submap collection.
+  void InsertRangeData(const sensor::RangeData& range_data) {
+    for (auto& submap : submaps_) {
+      submap->InsertRangeData(range_data, range_data_inserter_);
+    }
+    if (submaps_.back()->num_range_data() == options_.num_range_data()) {
+      AddSubmap(range_data.origin.head<2>());
+    }
+  };
+
+  std::vector<std::shared_ptr<Submap2D>> submaps() const {
+    std::vector<std::shared_ptr<Submap2D>> result(submaps_.begin(),
+                                                  submaps_.end());
+    return result;
+  }
 
  private:
-  void FinishSubmap();
-  void AddSubmap(const Eigen::Vector2f& origin);
+  void FinishSubmap() {
+    Submap2D* submap = submaps_.front().get();
+    submap->Finish();
+    ++matching_submap_index_;
+    submaps_.erase(submaps_.begin());
+  }
 
-  std::vector<std::shared_ptr<Submap2D>> submaps_;
+  void AddSubmap(const Eigen::Vector2f& origin) {
+    if (submaps_.size() > 1) {
+      // This will crop the finished Submap before inserting a new Submap to
+      // reduce peak memory usage a bit.
+      FinishSubmap();
+    }
+    constexpr int kInitialSubmapSize = 100;
+
+    submaps_.push_back(common::make_unique<Submap2DType>(
+        MapLimits(options_.resolution(),
+                  origin.cast<double>() + 0.5 * kInitialSubmapSize *
+                                              options_.resolution() *
+                                              Eigen::Vector2d::Ones(),
+                  CellLimits(kInitialSubmapSize, kInitialSubmapSize)),
+        origin));
+
+    LOG(INFO) << "Added submap " << matching_submap_index_ + submaps_.size();
+  }
+
+  std::vector<std::shared_ptr<Submap2DType>> submaps_;
   const proto::SubmapsOptions2D options_;
-  std::shared_ptr<RangeDataInserter2DProbabilityGrid>
-      range_data_inserter_probability_grid_;
-  std::shared_ptr<RangeDataInserter2DTSDF>
-      range_data_inserter_tsdf_;
+  RangeDataInserter2DType range_data_inserter_;
   int matching_submap_index_ = 0;
 };
 

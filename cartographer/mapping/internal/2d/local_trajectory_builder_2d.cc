@@ -36,11 +36,21 @@ static auto* kScanMatcherResidualAngleMetric = metrics::Histogram::Null();
 LocalTrajectoryBuilder2D::LocalTrajectoryBuilder2D(
     const proto::LocalTrajectoryBuilderOptions2D& options)
     : options_(options),
-      active_submaps_(options.submaps_options()),
+      // active_submaps_(options.submaps_options()),
       motion_filter_(options_.motion_filter_options()),
       real_time_correlative_scan_matcher_(
           options_.real_time_correlative_scan_matcher_options()),
-      ceres_scan_matcher_(options_.ceres_scan_matcher_options()) {}
+      ceres_scan_matcher_(options_.ceres_scan_matcher_options()) {
+  if (options.submaps_options().map_type() == proto::PROBABILITY_GRID) {
+    active_submaps_ = common::make_unique<ActiveSubmaps2DI<
+        Submap2DProbabilityGrid, RangeDataInserter2DProbabilityGrid>>(
+        options.submaps_options());
+  } else if (options.submaps_options().map_type() == proto::TSDF) {
+    active_submaps_ = common::make_unique<
+        ActiveSubmaps2DI<Submap2DTSDF, RangeDataInserter2DTSDF>>(
+        options.submaps_options());
+  }
+}
 
 LocalTrajectoryBuilder2D::~LocalTrajectoryBuilder2D() {}
 
@@ -62,7 +72,7 @@ std::unique_ptr<transform::Rigid2d> LocalTrajectoryBuilder2D::ScanMatch(
     const common::Time time, const transform::Rigid2d& pose_prediction,
     const sensor::RangeData& gravity_aligned_range_data) {
   std::shared_ptr<const Submap2D> matching_submap =
-      active_submaps_.submaps().front();
+      active_submaps_->submaps().front();
   // The online correlative scan matcher will refine the initial estimate for
   // the Ceres scan matcher.
   transform::Rigid2d initial_ceres_pose = pose_prediction;
@@ -242,10 +252,10 @@ LocalTrajectoryBuilder2D::InsertIntoSubmap(
   // Querying the active submaps must be done here before calling
   // InsertRangeData() since the queried values are valid for next insertion.
   std::vector<std::shared_ptr<const Submap2D>> insertion_submaps;
-  for (const std::shared_ptr<Submap2D>& submap : active_submaps_.submaps()) {
+  for (const std::shared_ptr<Submap2D>& submap : active_submaps_->submaps()) {
     insertion_submaps.push_back(submap);
   }
-  active_submaps_.InsertRangeData(range_data_in_local);
+  active_submaps_->InsertRangeData(range_data_in_local);
 
   sensor::AdaptiveVoxelFilter adaptive_voxel_filter(
       options_.loop_closure_adaptive_voxel_filter_options());

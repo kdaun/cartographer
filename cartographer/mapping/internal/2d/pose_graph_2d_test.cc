@@ -60,7 +60,8 @@ class PoseGraph2DTest : public ::testing::Test {
               miss_probability = 0.495,
             },
           })text");
-      active_submaps_ = common::make_unique<ActiveSubmaps2D>(
+      active_submaps_ = common::make_unique<ActiveSubmaps2DI<
+          Submap2DProbabilityGrid, RangeDataInserter2DProbabilityGrid>>(
           mapping::CreateSubmapsOptions2D(parameter_dictionary.get()));
     }
 
@@ -180,7 +181,9 @@ class PoseGraph2DTest : public ::testing::Test {
   }
 
   sensor::PointCloud point_cloud_;
-  std::unique_ptr<ActiveSubmaps2D> active_submaps_;
+  std::unique_ptr<ActiveSubmaps2DI<Submap2DProbabilityGrid,
+                                   RangeDataInserter2DProbabilityGrid>>
+      active_submaps_;
   common::ThreadPool thread_pool_;
   std::unique_ptr<PoseGraph2D> pose_graph_;
   transform::Rigid2d current_pose_;

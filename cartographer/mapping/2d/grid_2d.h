@@ -40,13 +40,14 @@ class Grid2D {
   virtual void FinishUpdate() = 0;
 
   // Returns the probability of the cell with 'cell_index'.
-  virtual float GetCorrespondence(const Eigen::Array2i& cell_index) const = 0;
+  virtual float GetCorrespondenceCost(
+      const Eigen::Array2i& cell_index) const = 0;
   // Returns the smallest possible correspondence value.
-  virtual float GetMinCorrespondence() const = 0;
+  virtual float GetMinCorrespondenceCost() const = 0;
   // Returns the smallest possible absolute correspondence value.
-  virtual float GetMinAbsCorrespondence() const = 0;
+  virtual float GetMinAbsCorrespondenceCost() const = 0;
   // Returns the largest possible correspondence value.
-  virtual float GetMaxCorrespondence() const = 0;
+  virtual float GetMaxCorrespondenceCost() const = 0;
 
   // Returns true if the probability at the specified index is known.
   virtual bool IsKnown(const Eigen::Array2i& cell_index) const = 0;

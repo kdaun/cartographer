@@ -98,7 +98,7 @@ class LocalTrajectoryBuilder2D {
   void InitializeExtrapolator(common::Time time);
 
   const proto::LocalTrajectoryBuilderOptions2D options_;
-  ActiveSubmaps2D active_submaps_;
+  std::unique_ptr<ActiveSubmaps2D> active_submaps_;
 
   MotionFilter motion_filter_;
   scan_matching::RealTimeCorrelativeScanMatcher2D

@@ -81,32 +81,33 @@ TEST(ProbabilityGridTest, ApplyOdds) {
                                     ComputeLookupTableToApplyOdds(Odds(0.9)));
   probability_grid.FinishUpdate();
   EXPECT_GT(probability_grid.GetProbability(Array2i(1, 0)), 0.5);
-  EXPECT_LT(probability_grid.GetCorrespondence(Array2i(1, 0)), 0.5);
+  EXPECT_LT(probability_grid.GetCorrespondenceCost(Array2i(1, 0)), 0.5);
 
   probability_grid.SetProbability(Array2i(0, 1), 0.5);
   probability_grid.ApplyLookupTable(Array2i(0, 1),
                                     ComputeLookupTableToApplyOdds(Odds(0.1)));
   probability_grid.FinishUpdate();
   EXPECT_LT(probability_grid.GetProbability(Array2i(0, 1)), 0.5);
-  EXPECT_GT(probability_grid.GetCorrespondence(Array2i(0, 1)), 0.5);
+  EXPECT_GT(probability_grid.GetCorrespondenceCost(Array2i(0, 1)), 0.5);
 
   // Tests adding odds to an unknown cell.
   probability_grid.ApplyLookupTable(Array2i(1, 1),
                                     ComputeLookupTableToApplyOdds(Odds(0.42)));
   EXPECT_NEAR(probability_grid.GetProbability(Array2i(1, 1)), 0.42, 1e-4);
-  EXPECT_NEAR(probability_grid.GetCorrespondence(Array2i(1, 1)), 0.58, 1e-4);
-
+  EXPECT_NEAR(probability_grid.GetCorrespondenceCost(Array2i(1, 1)), 0.58,
+              1e-4);
 
   // Tests that further updates are ignored if FinishUpdate() isn't called.
   probability_grid.ApplyLookupTable(Array2i(1, 1),
                                     ComputeLookupTableToApplyOdds(Odds(0.9)));
   EXPECT_NEAR(probability_grid.GetProbability(Array2i(1, 1)), 0.42, 1e-4);
-  EXPECT_NEAR(probability_grid.GetCorrespondence(Array2i(1, 1)), 0.58, 1e-4);
+  EXPECT_NEAR(probability_grid.GetCorrespondenceCost(Array2i(1, 1)), 0.58,
+              1e-4);
   probability_grid.FinishUpdate();
   probability_grid.ApplyLookupTable(Array2i(1, 1),
                                     ComputeLookupTableToApplyOdds(Odds(0.9)));
   EXPECT_GT(probability_grid.GetProbability(Array2i(1, 1)), 0.42);
-  EXPECT_LT(probability_grid.GetCorrespondence(Array2i(1, 1)), 0.58);
+  EXPECT_LT(probability_grid.GetCorrespondenceCost(Array2i(1, 1)), 0.58);
 }
 
 TEST(ProbabilityGridTest, GetProbability) {

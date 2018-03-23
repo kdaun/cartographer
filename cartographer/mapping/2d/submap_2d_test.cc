@@ -48,7 +48,8 @@ TEST(Submap2DTest, TheRightNumberOfRangeDataAreInserted) {
       "miss_probability = 0.495, "
       "},"
       "}");
-  ActiveSubmaps2D submaps{CreateSubmapsOptions2D(parameter_dictionary.get())};
+  ActiveSubmaps2DI<Submap2DProbabilityGrid, RangeDataInserter2DProbabilityGrid>
+      submaps{CreateSubmapsOptions2D(parameter_dictionary.get())};
   std::set<std::shared_ptr<Submap2D>> all_submaps;
   for (int i = 0; i != 1000; ++i) {
     submaps.InsertRangeData({Eigen::Vector3f::Zero(), {}, {}});
@@ -74,7 +75,7 @@ TEST(Submap2DTest, TheRightNumberOfRangeDataAreInserted) {
 TEST(Submap2DTest, ToFromProto) {
   Submap2DProbabilityGrid expected(
       MapLimits(1., Eigen::Vector2d(2., 3.), CellLimits(100, 110)),
-      Eigen::Vector2f(4.f, 5.f), std::shared_ptr<RangeDataInserter2DProbabilityGrid>());
+      Eigen::Vector2f(4.f, 5.f));
   proto::Submap proto;
   expected.ToProto(&proto, true /* include_probability_grid_data */);
   EXPECT_TRUE(proto.has_submap_2d());

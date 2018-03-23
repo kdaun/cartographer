@@ -50,12 +50,9 @@ ProbabilityGrid ComputeCroppedProbabilityGrid(
   return cropped_grid;
 }
 
-Submap2DProbabilityGrid::Submap2DProbabilityGrid(
-    const MapLimits& limits, const Eigen::Vector2f& origin,
-    std::shared_ptr<RangeDataInserter2DProbabilityGrid> range_data_inserter)
-    : Submap2D(limits, origin),
-      probability_grid_(limits),
-      range_data_inserter_(range_data_inserter) {}
+Submap2DProbabilityGrid::Submap2DProbabilityGrid(const MapLimits& limits,
+                                                 const Eigen::Vector2f& origin)
+    : Submap2D(limits, origin), probability_grid_(limits) {}
 
 Submap2DProbabilityGrid::Submap2DProbabilityGrid(
     const proto::Submap&
@@ -134,9 +131,10 @@ void Submap2DProbabilityGrid::ToResponseProto(
 }
 
 void Submap2DProbabilityGrid::InsertRangeData(
-    const sensor::RangeData& range_data) {
+    const sensor::RangeData& range_data,
+    const RangeDataInserter2DProbabilityGrid& range_data_inserter) {
   CHECK(!finished());
-  range_data_inserter_->Insert(range_data, &probability_grid_);
+  range_data_inserter.Insert(range_data, &probability_grid_);
   SetNumRangeData(num_range_data() + 1);
 }
 

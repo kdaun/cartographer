@@ -102,21 +102,19 @@ float TSDF2D::GetWeight(const Eigen::Array2i& cell_index) const {
   return kMaxTSDF;
 }
 
-float TSDF2D::GetCorrespondence(
-    const Eigen::Array2i &cell_index) const {
-  float correspondence = GetTSDF(cell_index);
-  CHECK_GE(correspondence, GetMinCorrespondence());
-  CHECK_GE(std::abs(correspondence), GetMinAbsCorrespondence());
-  CHECK_LE(correspondence, GetMaxCorrespondence());
-  //todo(kdaun) replace by DCHECK
-  return correspondence;
+float TSDF2D::GetCorrespondenceCost(const Eigen::Array2i& cell_index) const {
+  float correspondence_cost = GetTSDF(cell_index);
+  DCHECK_GE(correspondence_cost, GetMinCorrespondenceCost());
+  DCHECK_GE(std::abs(correspondence_cost), GetMinAbsCorrespondenceCost());
+  DCHECK_LE(correspondence_cost, GetMaxCorrespondenceCost());
+  return correspondence_cost;
 }
 
-float TSDF2D::GetMinCorrespondence() const { return -truncation_distance_; }
+float TSDF2D::GetMinCorrespondenceCost() const { return -truncation_distance_; }
 
-float TSDF2D::GetMinAbsCorrespondence() const { return 0.f; }
+float TSDF2D::GetMinAbsCorrespondenceCost() const { return 0.f; }
 
-float TSDF2D::GetMaxCorrespondence() const { return truncation_distance_; }
+float TSDF2D::GetMaxCorrespondenceCost() const { return truncation_distance_; }
 
 // Returns true if the probability at the specified index is known.
 bool TSDF2D::IsKnown(const Eigen::Array2i& cell_index) const {

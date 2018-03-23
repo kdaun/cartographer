@@ -42,9 +42,8 @@ ProbabilityGrid ComputeCroppedProbabilityGrid(
 
 class Submap2DProbabilityGrid : public Submap2D {
  public:
-  Submap2DProbabilityGrid(
-      const MapLimits& limits, const Eigen::Vector2f& origin,
-      std::shared_ptr<RangeDataInserter2DProbabilityGrid> range_data_inserter);
+  Submap2DProbabilityGrid(const MapLimits& limits,
+                          const Eigen::Vector2f& origin);
   explicit Submap2DProbabilityGrid(const proto::Submap& proto);
 
   void ToProto(proto::Submap* proto,
@@ -58,7 +57,9 @@ class Submap2DProbabilityGrid : public Submap2D {
 
   // Insert 'range_data' into this submap using 'range_data_inserter'. The
   // submap must not be finished yet.
-  void InsertRangeData(const sensor::RangeData& range_data) override;
+  void InsertRangeData(
+      const sensor::RangeData& range_data,
+      const RangeDataInserter2DProbabilityGrid& range_data_inserter);
   void Finish() override;
 
  private:

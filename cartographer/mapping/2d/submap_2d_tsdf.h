@@ -41,8 +41,7 @@ TSDF2D ComputeCroppedTSDF2D(const TSDF2D& tsdf);
 
 class Submap2DTSDF : public Submap2D {
  public:
-  Submap2DTSDF(const MapLimits& limits, const Eigen::Vector2f& origin,
-               std::shared_ptr<RangeDataInserter2DTSDF> range_data_inserter);
+  Submap2DTSDF(const MapLimits& limits, const Eigen::Vector2f& origin);
   explicit Submap2DTSDF(const proto::Submap& proto);
 
   void ToProto(proto::Submap* proto,
@@ -56,7 +55,8 @@ class Submap2DTSDF : public Submap2D {
 
   // Insert 'range_data' into this submap using 'range_data_inserter'. The
   // submap must not be finished yet.
-  void InsertRangeData(const sensor::RangeData& range_data) override;
+  void InsertRangeData(const sensor::RangeData& range_data,
+                       const RangeDataInserter2DTSDF& range_data_inserter);
   void Finish() override;
 
  private:

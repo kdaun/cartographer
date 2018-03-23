@@ -105,26 +105,26 @@ PrecomputationGrid2D::PrecomputationGrid2D(
   for (int y = 0; y != limits.num_y_cells; ++y) {
     SlidingWindowMinimum current_values;
     current_values.AddValue(
-        std::abs(grid.GetCorrespondence(Eigen::Array2i(0, y))));
+        std::abs(grid.GetCorrespondenceCost(Eigen::Array2i(0, y))));
     for (int x = -width + 1; x != 0; ++x) {
       intermediate[x + width - 1 + y * stride] = current_values.GetMinimum();
       if (x + width < limits.num_x_cells) {
         current_values.AddValue(
-            std::abs(grid.GetCorrespondence(Eigen::Array2i(x + width, y))));
+            std::abs(grid.GetCorrespondenceCost(Eigen::Array2i(x + width, y))));
       }
     }
     for (int x = 0; x < limits.num_x_cells - width; ++x) {
       intermediate[x + width - 1 + y * stride] = current_values.GetMinimum();
       current_values.RemoveValue(
-          std::abs(grid.GetCorrespondence(Eigen::Array2i(x, y))));
+          std::abs(grid.GetCorrespondenceCost(Eigen::Array2i(x, y))));
       current_values.AddValue(
-          std::abs(grid.GetCorrespondence(Eigen::Array2i(x + width, y))));
+          std::abs(grid.GetCorrespondenceCost(Eigen::Array2i(x + width, y))));
     }
     for (int x = std::max(limits.num_x_cells - width, 0);
          x != limits.num_x_cells; ++x) {
       intermediate[x + width - 1 + y * stride] = current_values.GetMinimum();
       current_values.RemoveValue(
-          std::abs(grid.GetCorrespondence(Eigen::Array2i(x, y))));
+          std::abs(grid.GetCorrespondenceCost(Eigen::Array2i(x, y))));
     }
     current_values.CheckIsEmpty();
   }
@@ -161,9 +161,10 @@ uint8 PrecomputationGrid2D::ComputeCellValue(
     const float correspondence,
     const Grid2D& grid) const {  // TODO(kdaun) check how this behaves for tsdf
   CHECK_GE(correspondence, 0.);
-  const int cell_value = common::RoundToInt(
-      (correspondence - grid.GetMinAbsCorrespondence()) *
-      (255.f / (grid.GetMaxCorrespondence() - grid.GetMinAbsCorrespondence())));
+  const int cell_value =
+      common::RoundToInt((correspondence - grid.GetMinAbsCorrespondenceCost()) *
+                         (255.f / (grid.GetMaxCorrespondenceCost() -
+                                   grid.GetMinAbsCorrespondenceCost())));
   CHECK_GE(cell_value, 0);
   CHECK_LE(cell_value, 255);
   return cell_value;

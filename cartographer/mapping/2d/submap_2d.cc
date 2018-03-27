@@ -15,6 +15,7 @@
  */
 
 #include "cartographer/mapping/2d/submap_2d.h"
+#include "cartographer/mapping/2d/range_data_inserter_2d.h"
 
 #include <cinttypes>
 #include <cmath>
@@ -41,9 +42,10 @@ proto::SubmapsOptions2D CreateSubmapsOptions2D(
   options.set_map_type(map_type);
   options.set_num_range_data(
       parameter_dictionary->GetNonNegativeInt("num_range_data"));
-  *options.mutable_range_data_inserter_options() =
+  proto::RangeDataInserterOptions2D range_data_inserter_options =
       CreateRangeDataInserterOptions2D(
           parameter_dictionary->GetDictionary("range_data_inserter").get());
+  *options.mutable_range_data_inserter_options() = range_data_inserter_options;
   CHECK_GT(options.num_range_data(), 0);
   return options;
 }

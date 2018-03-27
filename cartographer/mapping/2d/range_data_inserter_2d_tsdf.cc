@@ -34,8 +34,8 @@ RangeDataInserter2DTSDF::RangeDataInserter2DTSDF(
 
 void RangeDataInserter2DTSDF::Insert(const sensor::RangeData& range_data,
                                      TSDF2D* const tsdf) const {
-  const float tau = 0.3;
-  const float update_weight = 1.0f / (15.f * tau);
+  const float tau = options_.tsdf().truncation_distance();
+  const float update_weight = options_.tsdf().update_weight();
 
   for (const Eigen::Vector3f& hit : range_data.returns) {
     const Eigen::Vector3f direction = (hit - range_data.origin).normalized();

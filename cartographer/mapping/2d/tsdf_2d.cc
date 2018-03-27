@@ -17,7 +17,8 @@ int ToFlatIndex(const Eigen::Array2i& cell_index, const MapLimits& limits) {
 
 }  // namespace
 
-TSDF2D::TSDF2D(const MapLimits& limits)
+TSDF2D::TSDF2D(const MapLimits& limits, float truncation_distance,
+               float max_weight)
     : Grid2D(limits),
       tsdf_cells_(
           limits_.cell_limits().num_x_cells * limits_.cell_limits().num_y_cells,
@@ -25,7 +26,8 @@ TSDF2D::TSDF2D(const MapLimits& limits)
       weight_cells_(
           limits_.cell_limits().num_x_cells * limits_.cell_limits().num_y_cells,
           kUnknownWeightValue),
-      truncation_distance_(0.3f) {}
+      truncation_distance_(truncation_distance),
+      max_weight_(max_weight) {}
 
 TSDF2D::TSDF2D(const proto::Submap2D& proto)
     : Grid2D(MapLimits(proto.limits())),
@@ -33,6 +35,7 @@ TSDF2D::TSDF2D(const proto::Submap2D& proto)
       weight_cells_(),
       truncation_distance_(0.3f) {
   LOG(ERROR) << "TSDF2D(const proto::Submap2D& proto) not implemented";
+  CHECK(false);
 }
 
 // Finishes the update sequence.
@@ -92,14 +95,14 @@ float TSDF2D::GetTSDF(const Eigen::Array2i& cell_index) const {
   if (limits_.Contains(cell_index)) {
     return ValueToTSDF(tsdf_cells_[ToFlatIndex(cell_index, limits_)]);
   }
-  return kMinTSDF;
+  return kMinTSDF;  // todo(kdaun) Think about something reasonable here
 }
 
 float TSDF2D::GetWeight(const Eigen::Array2i& cell_index) const {
   if (limits_.Contains(cell_index)) {
     return ValueToWeight(weight_cells_[ToFlatIndex(cell_index, limits_)]);
   }
-  return kMaxTSDF;
+  return kMinWeight;
 }
 
 float TSDF2D::GetCorrespondenceCost(const Eigen::Array2i& cell_index) const {
@@ -115,6 +118,10 @@ float TSDF2D::GetMinCorrespondenceCost() const { return -truncation_distance_; }
 float TSDF2D::GetMinAbsCorrespondenceCost() const { return 0.f; }
 
 float TSDF2D::GetMaxCorrespondenceCost() const { return truncation_distance_; }
+float TSDF2D::GetMaxTSDF() const { return truncation_distance_; }
+float TSDF2D::GetMinTSDF() const { return -truncation_distance_; }
+float TSDF2D::GetMaxWeight() const { return max_weight_; }
+float TSDF2D::GetMinWeight() const { return 0.f; }
 
 // Returns true if the probability at the specified index is known.
 bool TSDF2D::IsKnown(const Eigen::Array2i& cell_index) const {

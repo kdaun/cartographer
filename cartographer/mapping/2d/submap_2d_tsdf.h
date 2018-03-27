@@ -41,7 +41,8 @@ TSDF2D ComputeCroppedTSDF2D(const TSDF2D& tsdf);
 
 class Submap2DTSDF : public Submap2D {
  public:
-  Submap2DTSDF(const MapLimits& limits, const Eigen::Vector2f& origin);
+  Submap2DTSDF(const MapLimits& limits, const Eigen::Vector2f& origin,
+               float truncation_distance, float max_weight);
   explicit Submap2DTSDF(const proto::Submap& proto);
 
   void ToProto(proto::Submap* proto,

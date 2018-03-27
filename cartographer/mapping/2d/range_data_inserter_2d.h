@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef CARTOGRAPHER_MAPPING_2D_RANGE_DATA_INSERTER_2D_TSDF_H_
-#define CARTOGRAPHER_MAPPING_2D_RANGE_DATA_INSERTER_2D_TSDF_H_
+#ifndef CARTOGRAPHER_MAPPING_2D_RANGE_DATA_INSERTER_2D_H_
+#define CARTOGRAPHER_MAPPING_2D_RANGE_DATA_INSERTER_2D_H_
 
 #include <utility>
 #include <vector>
@@ -23,7 +23,6 @@
 #include "cartographer/common/lua_parameter_dictionary.h"
 #include "cartographer/common/port.h"
 #include "cartographer/mapping/2d/proto/range_data_inserter_options_2d.pb.h"
-#include "cartographer/mapping/2d/tsdf_2d.h"
 #include "cartographer/mapping/2d/xy_index.h"
 #include "cartographer/sensor/point_cloud.h"
 #include "cartographer/sensor/range_data.h"
@@ -31,22 +30,10 @@
 namespace cartographer {
 namespace mapping {
 
-class RangeDataInserter2DTSDF {
- public:
-  explicit RangeDataInserter2DTSDF(
-      const proto::RangeDataInserterOptions2D& options);
-
-  RangeDataInserter2DTSDF(const RangeDataInserter2DTSDF&) = delete;
-  RangeDataInserter2DTSDF& operator=(const RangeDataInserter2DTSDF&) = delete;
-
-  // Inserts 'range_data' into 'probability_grid'.
-  void Insert(const sensor::RangeData& range_data, TSDF2D* tsdf) const;
-
- private:
-  const proto::RangeDataInserterOptions2D options_;
-};
+proto::RangeDataInserterOptions2D CreateRangeDataInserterOptions2D(
+    common::LuaParameterDictionary* const parameter_dictionary);
 
 }  // namespace mapping
 }  // namespace cartographer
 
-#endif  // CARTOGRAPHER_MAPPING_2D_RANGE_DATA_INSERTER_2D_TSDF_H_
+#endif  // CARTOGRAPHER_MAPPING_2D_RANGE_DATA_INSERTER_2D_H_

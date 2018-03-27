@@ -31,7 +31,8 @@ namespace mapping {
 // Represents a 2D grid of probabilities.
 class TSDF2D : public Grid2D {
  public:
-  explicit TSDF2D(const MapLimits& limits);
+  explicit TSDF2D(const MapLimits& limits, float truncation_distance,
+                  float max_weight);
   explicit TSDF2D(const proto::Submap2D& proto);
 
   void FinishUpdate() override;
@@ -50,6 +51,10 @@ class TSDF2D : public Grid2D {
   float GetMinCorrespondenceCost() const override;
   float GetMinAbsCorrespondenceCost() const override;
   float GetMaxCorrespondenceCost() const override;
+  float GetMaxTSDF() const;
+  float GetMinTSDF() const;
+  float GetMaxWeight() const;
+  float GetMinWeight() const;
 
   bool IsKnown(const Eigen::Array2i& cell_index) const override;
 
@@ -61,6 +66,7 @@ class TSDF2D : public Grid2D {
   std::vector<uint16> tsdf_cells_;    // Highest bit is update marker.
   std::vector<uint16> weight_cells_;  // Highest bit is update marker.
   float truncation_distance_;
+  float max_weight_;
 };
 
 }  // namespace mapping

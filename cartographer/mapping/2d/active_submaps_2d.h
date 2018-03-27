@@ -140,6 +140,30 @@ class ActiveSubmaps2DI : public ActiveSubmaps2D {
   int matching_submap_index_ = 0;
 };
 
+template <>
+inline void ActiveSubmaps2DI<Submap2DTSDF, RangeDataInserter2DTSDF>::AddSubmap(
+    const Eigen::Vector2f& origin) {
+  if (submaps_.size() > 1) {
+    // This will crop the finished Submap before inserting a new Submap to
+    // reduce peak memory usage a bit.
+    FinishSubmap();
+  }
+  constexpr int kInitialSubmapSize = 100;
+
+  const proto::RangeDataInserterOptions2DTSDF& tsdf_options =
+      options_.range_data_inserter_options().tsdf();
+  submaps_.push_back(common::make_unique<Submap2DTSDF>(
+      MapLimits(options_.resolution(),
+                origin.cast<double>() + 0.5 * kInitialSubmapSize *
+                                            options_.resolution() *
+                                            Eigen::Vector2d::Ones(),
+                CellLimits(kInitialSubmapSize, kInitialSubmapSize)),
+      origin, tsdf_options.truncation_distance(),
+      tsdf_options.maximum_weight()));
+
+  LOG(INFO) << "Added submap " << matching_submap_index_ + submaps_.size();
+}
+
 }  // namespace mapping
 }  // namespace cartographer
 

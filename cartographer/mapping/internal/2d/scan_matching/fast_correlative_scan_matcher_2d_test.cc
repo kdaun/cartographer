@@ -24,6 +24,7 @@
 
 #include "cartographer/common/lua_parameter_dictionary_test_helpers.h"
 #include "cartographer/mapping/2d/probability_grid.h"
+#include "cartographer/mapping/2d/range_data_inserter_2d.h"
 #include "cartographer/mapping/2d/range_data_inserter_2d_probability_grid.h"
 #include "cartographer/transform/rigid_transform_test_helpers.h"
 #include "cartographer/transform/transform.h"

@@ -23,6 +23,7 @@
 #include "cartographer/common/lua_parameter_dictionary_test_helpers.h"
 #include "cartographer/common/make_unique.h"
 #include "cartographer/mapping/2d/probability_grid.h"
+#include "cartographer/mapping/2d/range_data_inserter_2d.h"
 #include "cartographer/mapping/2d/range_data_inserter_2d_probability_grid.h"
 #include "cartographer/mapping/internal/scan_matching/real_time_correlative_scan_matcher.h"
 #include "cartographer/sensor/point_cloud.h"
@@ -46,8 +47,9 @@ class RealTimeCorrelativeScanMatcherTest : public ::testing::Test {
           "hit_probability = 0.7, "
           "miss_probability = 0.4, "
           "}");
-      range_data_inserter_ = common::make_unique<RangeDataInserter2DProbabilityGrid>(
-          CreateRangeDataInserterOptions2D(parameter_dictionary.get()));
+      range_data_inserter_ =
+          common::make_unique<RangeDataInserter2DProbabilityGrid>(
+              CreateRangeDataInserterOptions2D(parameter_dictionary.get()));
     }
     point_cloud_.emplace_back(0.025f, 0.175f, 0.f);
     point_cloud_.emplace_back(-0.025f, 0.175f, 0.f);

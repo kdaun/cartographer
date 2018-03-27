@@ -31,16 +31,15 @@
 namespace cartographer {
 namespace mapping {
 
-proto::RangeDataInserterOptions2D CreateRangeDataInserterOptions2D(
-    common::LuaParameterDictionary* parameter_dictionary);
-
 class RangeDataInserter2DProbabilityGrid {
  public:
   explicit RangeDataInserter2DProbabilityGrid(
       const proto::RangeDataInserterOptions2D& options);
 
-  RangeDataInserter2DProbabilityGrid(const RangeDataInserter2DProbabilityGrid&) = delete;
-  RangeDataInserter2DProbabilityGrid& operator=(const RangeDataInserter2DProbabilityGrid&) = delete;
+  RangeDataInserter2DProbabilityGrid(
+      const RangeDataInserter2DProbabilityGrid&) = delete;
+  RangeDataInserter2DProbabilityGrid& operator=(
+      const RangeDataInserter2DProbabilityGrid&) = delete;
 
   // Inserts 'range_data' into 'probability_grid'.
   void Insert(const sensor::RangeData& range_data,

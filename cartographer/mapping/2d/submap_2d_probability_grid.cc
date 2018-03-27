@@ -54,9 +54,7 @@ Submap2DProbabilityGrid::Submap2DProbabilityGrid(const MapLimits& limits,
                                                  const Eigen::Vector2f& origin)
     : Submap2D(limits, origin), probability_grid_(limits) {}
 
-Submap2DProbabilityGrid::Submap2DProbabilityGrid(
-    const proto::Submap&
-        proto)  // todo(kdaun) discuss how to handle range_data_inserter here
+Submap2DProbabilityGrid::Submap2DProbabilityGrid(const proto::Submap& proto)
     : Submap2D(proto), probability_grid_(ProbabilityGrid(proto.submap_2d())) {}
 
 void Submap2DProbabilityGrid::ToProto(

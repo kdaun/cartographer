@@ -39,7 +39,8 @@ TSDF2D ComputeCroppedTSDF2D(const TSDF2D& tsdf) {
   const Eigen::Vector2d max =
       tsdf.limits().max() -
       resolution * Eigen::Vector2d(offset.y(), offset.x());
-  TSDF2D cropped_grid(MapLimits(resolution, max, limits));
+  TSDF2D cropped_grid(MapLimits(resolution, max, limits), tsdf.GetMaxTSDF(),
+                      tsdf.GetMaxWeight());
   for (const Eigen::Array2i& xy_index : XYIndexRangeIterator(limits)) {
     if (tsdf.IsKnown(xy_index + offset)) {
       cropped_grid.SetCell(xy_index, tsdf.GetTSDF(xy_index + offset),
@@ -50,8 +51,10 @@ TSDF2D ComputeCroppedTSDF2D(const TSDF2D& tsdf) {
 }
 
 Submap2DTSDF::Submap2DTSDF(const MapLimits& limits,
-                           const Eigen::Vector2f& origin)
-    : Submap2D(limits, origin), tsdf_(limits) {}
+                           const Eigen::Vector2f& origin,
+                           float truncation_distance, float max_weight)
+    : Submap2D(limits, origin),
+      tsdf_(limits, truncation_distance, max_weight) {}
 
 Submap2DTSDF::Submap2DTSDF(const proto::Submap& proto)
     : Submap2D(proto), tsdf_(TSDF2D(proto.submap_2d())) {}

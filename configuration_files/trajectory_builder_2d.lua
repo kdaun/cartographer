@@ -66,9 +66,18 @@ TRAJECTORY_BUILDER_2D = {
     map_type = "PROBABILITY_GRID",
     num_range_data = 90,
     range_data_inserter = {
-      insert_free_space = true,
-      hit_probability = 0.55,
-      miss_probability = 0.49,
+        probability_grid = {
+          insert_free_space = true,
+          hit_probability = 0.55,
+          miss_probability = 0.49,
+      },
+        tsdf = {
+          range_data_inserter_type = "CONSTANT_WEIGHT",
+          truncation_distance = 0.3,
+          behind_surface_distance = 0.3,
+          update_weight = 1.0,
+          maximum_weight = 50.,
+      },
     },
   },
 }

@@ -22,6 +22,7 @@
 #include "cartographer/common/lua_parameter_dictionary_test_helpers.h"
 #include "cartographer/common/make_unique.h"
 #include "cartographer/mapping/2d/probability_grid.h"
+#include "cartographer/mapping/2d/range_data_inserter_2d.h"
 #include "cartographer/mapping/probability_values.h"
 #include "gmock/gmock.h"
 
@@ -41,7 +42,8 @@ class RangeDataInserterTest2D : public ::testing::Test {
         "miss_probability = 0.4, "
         "}");
     options_ = CreateRangeDataInserterOptions2D(parameter_dictionary.get());
-    range_data_inserter_ = common::make_unique<RangeDataInserter2DProbabilityGrid>(options_);
+    range_data_inserter_ =
+        common::make_unique<RangeDataInserter2DProbabilityGrid>(options_);
   }
 
   void InsertPointCloud() {
@@ -89,11 +91,11 @@ TEST_F(RangeDataInserterTest2D, InsertPointCloud) {
           EXPECT_FALSE(probability_grid_.IsKnown(cell_index));
           break;
         case State::MISS:
-          EXPECT_NEAR(options_.miss_probability(),
+          EXPECT_NEAR(options_.probability_grid().miss_probability(),
                       probability_grid_.GetProbability(cell_index), 1e-4);
           break;
         case State::HIT:
-          EXPECT_NEAR(options_.hit_probability(),
+          EXPECT_NEAR(options_.probability_grid().hit_probability(),
                       probability_grid_.GetProbability(cell_index), 1e-4);
           break;
       }
@@ -104,12 +106,12 @@ TEST_F(RangeDataInserterTest2D, InsertPointCloud) {
 TEST_F(RangeDataInserterTest2D, ProbabilityProgression) {
   InsertPointCloud();
   EXPECT_NEAR(
-      options_.hit_probability(),
+      options_.probability_grid().hit_probability(),
       probability_grid_.GetProbability(probability_grid_.limits().GetCellIndex(
           Eigen::Vector2f(-3.5f, 0.5f))),
       1e-4);
   EXPECT_NEAR(
-      options_.miss_probability(),
+      options_.probability_grid().miss_probability(),
       probability_grid_.GetProbability(probability_grid_.limits().GetCellIndex(
           Eigen::Vector2f(-2.5f, 0.5f))),
       1e-4);

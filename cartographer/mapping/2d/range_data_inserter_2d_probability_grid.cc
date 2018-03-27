@@ -28,36 +28,21 @@
 namespace cartographer {
 namespace mapping {
 
-proto::RangeDataInserterOptions2D CreateRangeDataInserterOptions2D(
-    common::LuaParameterDictionary* const parameter_dictionary) {
-  proto::RangeDataInserterOptions2D options;
-  options.set_hit_probability(
-      parameter_dictionary->GetDouble("hit_probability"));
-  options.set_miss_probability(
-      parameter_dictionary->GetDouble("miss_probability"));
-  options.set_insert_free_space(
-      parameter_dictionary->HasKey("insert_free_space")
-          ? parameter_dictionary->GetBool("insert_free_space")
-          : true);
-  CHECK_GT(options.hit_probability(), 0.5);
-  CHECK_LT(options.miss_probability(), 0.5);
-  return options;
-}
-
 RangeDataInserter2DProbabilityGrid::RangeDataInserter2DProbabilityGrid(
     const proto::RangeDataInserterOptions2D& options)
     : options_(options),
-      hit_table_(
-          ComputeLookupTableToApplyOdds(Odds(options.hit_probability()))),
-      miss_table_(
-          ComputeLookupTableToApplyOdds(Odds(options.miss_probability()))) {}
+      hit_table_(ComputeLookupTableToApplyOdds(
+          Odds(options_.probability_grid().hit_probability()))),
+      miss_table_(ComputeLookupTableToApplyOdds(
+          Odds(options_.probability_grid().miss_probability()))) {}
 
 void RangeDataInserter2DProbabilityGrid::Insert(
     const sensor::RangeData& range_data,
     ProbabilityGrid* const probability_grid) const {
   // By not finishing the update after hits are inserted, we give hits priority
   // (i.e. no hits will be ignored because of a miss in the same cell).
-  CastRays(range_data, hit_table_, miss_table_, options_.insert_free_space(),
+  CastRays(range_data, hit_table_, miss_table_,
+           options_.probability_grid().insert_free_space(),
            CHECK_NOTNULL(probability_grid));
   probability_grid->FinishUpdate();
 }

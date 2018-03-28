@@ -43,9 +43,18 @@ TEST(Submap2DTest, TheRightNumberOfRangeDataAreInserted) {
       std::to_string(kNumRangeData) +
       ", "
       "range_data_inserter = {"
+      "probability_grid = {"
       "insert_free_space = true, "
       "hit_probability = 0.53, "
       "miss_probability = 0.495, "
+      "},"
+      "tsdf = {"
+      "range_data_inserter_type = \"CONSTANT_WEIGHT\","
+      "truncation_distance = 0.3,"
+      "behind_surface_distance = 0.3,"
+      "update_weight = 1.0,"
+      "maximum_weight = 50.,"
+      "},"
       "},"
       "}");
   ActiveSubmaps2DI<Submap2DProbabilityGrid, RangeDataInserter2DProbabilityGrid>

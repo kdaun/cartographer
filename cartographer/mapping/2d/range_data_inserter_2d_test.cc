@@ -37,9 +37,18 @@ class RangeDataInserterTest2D : public ::testing::Test {
             MapLimits(1., Eigen::Vector2d(1., 5.), CellLimits(5, 5))) {
     auto parameter_dictionary = common::MakeDictionary(
         "return { "
+        "probability_grid = {"
         "insert_free_space = true, "
         "hit_probability = 0.7, "
         "miss_probability = 0.4, "
+        "},"
+        "tsdf = {"
+        "range_data_inserter_type = \"CONSTANT_WEIGHT\","
+        "truncation_distance = 0.3,"
+        "behind_surface_distance = 0.3,"
+        "update_weight = 1.0,"
+        "maximum_weight = 50.,"
+        "},"
         "}");
     options_ = CreateRangeDataInserterOptions2D(parameter_dictionary.get());
     range_data_inserter_ =

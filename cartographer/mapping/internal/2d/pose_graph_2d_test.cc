@@ -55,9 +55,18 @@ class PoseGraph2DTest : public ::testing::Test {
             map_type = "PROBABILITY_GRID",
             num_range_data = 1,
             range_data_inserter = {
-              insert_free_space = true,
-              hit_probability = 0.53,
-              miss_probability = 0.495,
+              probability_grid = {
+                insert_free_space = true,
+                hit_probability = 0.53,
+                miss_probability = 0.495,
+              },
+              tsdf = {
+                range_data_inserter_type = "CONSTANT_WEIGHT",
+                truncation_distance = 0.3,
+                behind_surface_distance = 0.3,
+                update_weight = 1.0,
+                maximum_weight = 50.,
+              },
             },
           })text");
       active_submaps_ = common::make_unique<ActiveSubmaps2DI<

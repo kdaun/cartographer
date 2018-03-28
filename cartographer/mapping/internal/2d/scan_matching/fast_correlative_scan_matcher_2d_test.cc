@@ -122,9 +122,18 @@ mapping::proto::RangeDataInserterOptions2D
 CreateRangeDataInserterTestOptions2D() {
   auto parameter_dictionary = common::MakeDictionary(R"text(
       return {
-        insert_free_space = true,
-        hit_probability = 0.7,
-        miss_probability = 0.4,
+              probability_grid = {
+                insert_free_space = true,
+                hit_probability = 0.7,
+                miss_probability = 0.4,
+              },
+              tsdf = {
+                range_data_inserter_type = "CONSTANT_WEIGHT",
+                truncation_distance = 0.3,
+                behind_surface_distance = 0.3,
+                update_weight = 1.0,
+                maximum_weight = 50.,
+              },
       })text");
   return mapping::CreateRangeDataInserterOptions2D(parameter_dictionary.get());
 }

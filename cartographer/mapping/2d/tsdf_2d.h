@@ -41,8 +41,8 @@ class TSDF2D : public Grid2D {
   void SetCell(const Eigen::Array2i& cell_index, const float tsdf,
                const float weight);
 
-  bool UpdateCell(const Eigen::Array2i& cell_index, const float tsdf,
-                  const float weight = 0.1);
+  bool UpdateCell(const Eigen::Array2i& cell_index, const float updated_sdf,
+                  const float updated_weight = 0.1);
 
   float GetTSDF(const Eigen::Array2i& cell_index) const;
 

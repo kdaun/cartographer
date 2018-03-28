@@ -43,6 +43,11 @@ class RangeDataInserter2DTSDF {
   void Insert(const sensor::RangeData& range_data, TSDF2D* tsdf) const;
 
  private:
+  void UpdateCell(TSDF2D* const tsdf, const Eigen::Array2i& cell,
+                  float update_sdf, float ray_length) const;
+  float ComputeWeightConstant(float sdf) const;
+  float ComputeWeightLinear(float sdf, float ray_length) const;
+  float ComputeWeightQuadratic(float sdf, float ray_length) const;
   const proto::RangeDataInserterOptions2D options_;
 };
 

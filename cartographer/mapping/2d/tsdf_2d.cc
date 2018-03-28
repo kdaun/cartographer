@@ -65,38 +65,18 @@ void TSDF2D::SetCell(const Eigen::Array2i& cell_index, const float tsdf,
 }
 
 bool TSDF2D::UpdateCell(const Eigen::Array2i& cell_index,
-                        const float update_tsdf, const float update_weight) {
+                        const float updated_sdf, const float updated_weight) {
   const int flat_index = ToFlatIndex(cell_index, limits_);
   uint16* tsdf_cell = &tsdf_cells_[flat_index];
   uint16* weight_cell = &weight_cells_[flat_index];
-  if (*tsdf_cell >= value_helper.getUpdateMarker()) {
-    float current_tsdf =
-        value_helper.ValueToTSDF(*tsdf_cell - value_helper.getUpdateMarker());
-    float current_weight = value_helper.ValueToWeight(*weight_cell);
-    current_tsdf =
-        (current_weight * current_tsdf + update_tsdf * update_weight) /
-        (current_weight + update_weight);
-    current_weight += update_weight;
-    *tsdf_cell =
-        value_helper.TSDFToValue(current_tsdf) + value_helper.getUpdateMarker();
-    *weight_cell = value_helper.WeightToValue(current_weight);
-    return false;
-  } else {
+  if (*tsdf_cell < value_helper.getUpdateMarker()) {
     update_indices_.push_back(flat_index);
-    float current_tsdf = value_helper.ValueToTSDF(*tsdf_cell);
-    float current_weight = value_helper.ValueToWeight(
-        *weight_cell);  // TODO(kdaun) remove code duplication
-    current_tsdf =
-        (current_weight * current_tsdf + update_tsdf * update_weight) /
-        (current_weight + update_weight);
-    current_weight += update_weight;
-    *tsdf_cell =
-        value_helper.TSDFToValue(current_tsdf) + value_helper.getUpdateMarker();
-    *weight_cell = value_helper.WeightToValue(current_weight);
-    DCHECK_GE(*tsdf_cell, value_helper.getUpdateMarker());
     known_cells_box_.extend(cell_index.matrix());
-    return true;
   }
+  *tsdf_cell =
+      value_helper.TSDFToValue(updated_sdf) + value_helper.getUpdateMarker();
+  *weight_cell = value_helper.WeightToValue(updated_weight);
+  return true;
 }
 
 float TSDF2D::GetTSDF(const Eigen::Array2i& cell_index) const {

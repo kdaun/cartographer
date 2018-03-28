@@ -174,9 +174,7 @@ TEST(ProbabilityGridTest, GetCellIndexPositionConsistency) {
   float resolution = 0.05;
   ProbabilityGrid probability_grid(
       MapLimits(resolution, Eigen::Vector2d(10., 10.), CellLimits(400, 400)));
-
   const MapLimits& limits = probability_grid.limits();
-  const CellLimits& cell_limits = limits.cell_limits();
 
   for (int i = 0; i < 100; ++i) {
     Vector2f position = {value_distribution(rng), value_distribution(rng)};

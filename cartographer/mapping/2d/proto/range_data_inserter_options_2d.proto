@@ -39,7 +39,8 @@ message RangeDataInserterOptions2DProbabilityGrid {
 
 enum RangeDataInserter2DTSDFType {
   CONSTANT_WEIGHT = 0;
-  QUADRATIC_WEIGHT = 1;
+  LINEAR_WEIGHT = 1;
+  QUADRATIC_WEIGHT = 2;
 }
 
 message RangeDataInserterOptions2DTSDF {

@@ -20,20 +20,23 @@ int ToFlatIndex(const Eigen::Array2i& cell_index, const MapLimits& limits) {
 TSDF2D::TSDF2D(const MapLimits& limits, float truncation_distance,
                float max_weight)
     : Grid2D(limits),
+      truncation_distance_(truncation_distance),
+      max_weight_(max_weight),
+      value_helper(truncation_distance, max_weight),
       tsdf_cells_(
           limits_.cell_limits().num_x_cells * limits_.cell_limits().num_y_cells,
-          kUnknownTSDFValue),
+          value_helper.getUnknownTSDFValue()),
       weight_cells_(
           limits_.cell_limits().num_x_cells * limits_.cell_limits().num_y_cells,
-          kUnknownWeightValue),
-      truncation_distance_(truncation_distance),
-      max_weight_(max_weight) {}
+          value_helper.getUnknownWeightValue()) {}
 
 TSDF2D::TSDF2D(const proto::Submap2D& proto)
     : Grid2D(MapLimits(proto.limits())),
+      truncation_distance_(0.3f),
+      max_weight_(10.f),
+      value_helper(truncation_distance_, max_weight_),
       tsdf_cells_(),
-      weight_cells_(),
-      truncation_distance_(0.3f) {
+      weight_cells_() {
   LOG(ERROR) << "TSDF2D(const proto::Submap2D& proto) not implemented";
   CHECK(false);
 }
@@ -41,10 +44,12 @@ TSDF2D::TSDF2D(const proto::Submap2D& proto)
 // Finishes the update sequence.
 void TSDF2D::FinishUpdate() {
   while (!update_indices_.empty()) {
-    DCHECK_GE(tsdf_cells_[update_indices_.back()], kUpdateMarker);
-    tsdf_cells_[update_indices_.back()] -= kUpdateMarker;
-    DCHECK_GE(weight_cells_[update_indices_.back()], kUpdateMarker);
-    weight_cells_[update_indices_.back()] -= kUpdateMarker;
+    DCHECK_GE(tsdf_cells_[update_indices_.back()],
+              value_helper.getUpdateMarker());
+    tsdf_cells_[update_indices_.back()] -= value_helper.getUpdateMarker();
+    DCHECK_GE(weight_cells_[update_indices_.back()],
+              value_helper.getUpdateMarker());
+    weight_cells_[update_indices_.back()] -= value_helper.getUpdateMarker();
     update_indices_.pop_back();
   }
 }
@@ -53,9 +58,9 @@ void TSDF2D::SetCell(const Eigen::Array2i& cell_index, const float tsdf,
                      const float weight) {
   uint16& cell_tsdf = tsdf_cells_[ToFlatIndex(cell_index, limits_)];
   // CHECK_EQ(cell, kUnknownProbabilityValue);
-  cell_tsdf = TSDFToValue(tsdf);
+  cell_tsdf = value_helper.TSDFToValue(tsdf);
   uint16& cell_weight = weight_cells_[ToFlatIndex(cell_index, limits_)];
-  cell_weight = WeightToValue(weight);
+  cell_weight = value_helper.WeightToValue(weight);
   known_cells_box_.extend(cell_index.matrix());
 }
 
@@ -64,28 +69,31 @@ bool TSDF2D::UpdateCell(const Eigen::Array2i& cell_index,
   const int flat_index = ToFlatIndex(cell_index, limits_);
   uint16* tsdf_cell = &tsdf_cells_[flat_index];
   uint16* weight_cell = &weight_cells_[flat_index];
-  if (*tsdf_cell >= kUpdateMarker) {
-    float current_tsdf = ValueToTSDF(*tsdf_cell - kUpdateMarker);
-    float current_weight = ValueToWeight(*weight_cell);
+  if (*tsdf_cell >= value_helper.getUpdateMarker()) {
+    float current_tsdf =
+        value_helper.ValueToTSDF(*tsdf_cell - value_helper.getUpdateMarker());
+    float current_weight = value_helper.ValueToWeight(*weight_cell);
     current_tsdf =
         (current_weight * current_tsdf + update_tsdf * update_weight) /
         (current_weight + update_weight);
     current_weight += update_weight;
-    *tsdf_cell = TSDFToValue(current_tsdf) + kUpdateMarker;
-    *weight_cell = WeightToValue(current_weight);
+    *tsdf_cell =
+        value_helper.TSDFToValue(current_tsdf) + value_helper.getUpdateMarker();
+    *weight_cell = value_helper.WeightToValue(current_weight);
     return false;
   } else {
     update_indices_.push_back(flat_index);
-    float current_tsdf = ValueToTSDF(*tsdf_cell);
-    float current_weight =
-        ValueToWeight(*weight_cell);  // TODO(kdaun) remove code duplication
+    float current_tsdf = value_helper.ValueToTSDF(*tsdf_cell);
+    float current_weight = value_helper.ValueToWeight(
+        *weight_cell);  // TODO(kdaun) remove code duplication
     current_tsdf =
         (current_weight * current_tsdf + update_tsdf * update_weight) /
         (current_weight + update_weight);
     current_weight += update_weight;
-    *tsdf_cell = TSDFToValue(current_tsdf) + kUpdateMarker;
-    *weight_cell = WeightToValue(current_weight);
-    DCHECK_GE(*tsdf_cell, kUpdateMarker);
+    *tsdf_cell =
+        value_helper.TSDFToValue(current_tsdf) + value_helper.getUpdateMarker();
+    *weight_cell = value_helper.WeightToValue(current_weight);
+    DCHECK_GE(*tsdf_cell, value_helper.getUpdateMarker());
     known_cells_box_.extend(cell_index.matrix());
     return true;
   }
@@ -93,16 +101,19 @@ bool TSDF2D::UpdateCell(const Eigen::Array2i& cell_index,
 
 float TSDF2D::GetTSDF(const Eigen::Array2i& cell_index) const {
   if (limits_.Contains(cell_index)) {
-    return ValueToTSDF(tsdf_cells_[ToFlatIndex(cell_index, limits_)]);
+    return value_helper.ValueToTSDF(
+        tsdf_cells_[ToFlatIndex(cell_index, limits_)]);
   }
-  return kMinTSDF;  // todo(kdaun) Think about something reasonable here
+  return value_helper
+      .getMinTSDF();  // todo(kdaun) Think about something reasonable here
 }
 
 float TSDF2D::GetWeight(const Eigen::Array2i& cell_index) const {
   if (limits_.Contains(cell_index)) {
-    return ValueToWeight(weight_cells_[ToFlatIndex(cell_index, limits_)]);
+    return value_helper.ValueToWeight(
+        weight_cells_[ToFlatIndex(cell_index, limits_)]);
   }
-  return kMinWeight;
+  return value_helper.getMinWeight();
 }
 
 float TSDF2D::GetCorrespondenceCost(const Eigen::Array2i& cell_index) const {
@@ -118,15 +129,16 @@ float TSDF2D::GetMinCorrespondenceCost() const { return -truncation_distance_; }
 float TSDF2D::GetMinAbsCorrespondenceCost() const { return 0.f; }
 
 float TSDF2D::GetMaxCorrespondenceCost() const { return truncation_distance_; }
-float TSDF2D::GetMaxTSDF() const { return truncation_distance_; }
-float TSDF2D::GetMinTSDF() const { return -truncation_distance_; }
-float TSDF2D::GetMaxWeight() const { return max_weight_; }
-float TSDF2D::GetMinWeight() const { return 0.f; }
+float TSDF2D::GetMaxTSDF() const { return value_helper.getMaxTSDF(); }
+float TSDF2D::GetMinTSDF() const { return value_helper.getMinTSDF(); }
+float TSDF2D::GetMaxWeight() const { return value_helper.getMaxWeight(); }
+float TSDF2D::GetMinWeight() const { return value_helper.getMinWeight(); }
 
 // Returns true if the probability at the specified index is known.
 bool TSDF2D::IsKnown(const Eigen::Array2i& cell_index) const {
   return limits_.Contains(cell_index) &&
-         tsdf_cells_[ToFlatIndex(cell_index, limits_)] != kUnknownTSDFValue;
+         tsdf_cells_[ToFlatIndex(cell_index, limits_)] !=
+             value_helper.getUnknownTSDFValue();
 }
 
 proto::Submap2D TSDF2D::ToProto() const {
@@ -171,9 +183,11 @@ void TSDF2D::GrowLimits(const Eigen::Vector2f& point) {
     const int stride = new_limits.cell_limits().num_x_cells;
     const int offset = x_offset + stride * y_offset;
     const int new_size = new_limits.cell_limits().num_x_cells *
-        new_limits.cell_limits().num_y_cells;
-    std::vector<uint16> new_tsdf_cells(new_size, kUnknownTSDFValue);
-    std::vector<uint16> new_weight_cells(new_size, kUnknownWeightValue);
+                         new_limits.cell_limits().num_y_cells;
+    std::vector<uint16> new_tsdf_cells(new_size,
+                                       value_helper.getUnknownTSDFValue());
+    std::vector<uint16> new_weight_cells(new_size,
+                                         value_helper.getUnknownTSDFValue());
     for (int i = 0; i < limits_.cell_limits().num_y_cells; ++i) {
       for (int j = 0; j < limits_.cell_limits().num_x_cells; ++j) {
         new_tsdf_cells[offset + j + i * stride] =

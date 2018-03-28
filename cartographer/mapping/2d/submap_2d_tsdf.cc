@@ -101,11 +101,12 @@ void Submap2DTSDF::ToResponseProto(
       // is currently white, so walls will look too gray. This should be hard to
       // detect visually for the user, though.
       float normalized_tsdf = std::abs(tsdf_.GetTSDF(xy_index + offset));
-      normalized_tsdf = std::pow(normalized_tsdf/0.3,1./2.); //reshaping
-      float normalized_weight = tsdf_.GetWeight(xy_index + offset)/100.f;
+      normalized_tsdf =
+          std::pow(normalized_tsdf / tsdf_.GetMaxTSDF(), 1. / 2.);  // reshaping
+      float normalized_weight =
+          tsdf_.GetWeight(xy_index + offset) / tsdf_.GetMaxWeight();
 
-      const int delta =
-          normalized_weight*(normalized_tsdf * 255. - 128.);
+      const int delta = normalized_weight * (normalized_tsdf * 255. - 128.);
       const uint8 alpha = delta > 0 ? 0 : -delta;
       const uint8 value = delta > 0 ? delta : 0;
       cells.push_back(value);

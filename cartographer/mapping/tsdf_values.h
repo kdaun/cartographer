@@ -27,61 +27,77 @@
 namespace cartographer {
 namespace mapping {
 
-constexpr float kMinTSDF = -0.3f;
-constexpr float kMaxTSDF = -kMinTSDF;
+class TSDFValueHelper {
+ public:
+  TSDFValueHelper(float max_tsdf, float max_weight);
+  // Clamps probability to be in the range [kMinTSDF, kMaxTSDF].
+  inline float ClampTSDF(const float tsdf) const {
+    return common::Clamp(tsdf, kMinTSDF, kMaxTSDF);
+  }
+  // Clamps probability to be in the range [kMinTSDF, kMaxTSDF].
+  inline float ClampWeight(const float tsdf) const {
+    return common::Clamp(tsdf, kMinWeight, kMaxWeight);
+  }
 
-constexpr float kMinWeight = 0.0f;
-constexpr float kMaxWeight = 100.0f;
+  // Converts a tsdf to a uint16 in the [1, 32767] range.
+  inline uint16 TSDFToValue(const float tsdf) const {
+    const int value = common::RoundToInt((ClampTSDF(tsdf) - kMinTSDF) *
+                                         (32766.f / (kMaxTSDF - kMinTSDF))) +
+                      1;
+    // DCHECK for performance.
+    DCHECK_GE(value, 1);
+    DCHECK_LE(value, 32767);
+    return value;
+  }
 
-// Clamps probability to be in the range [kMinTSDF, kMaxTSDF].
-inline float ClampTSDF(const float tsdf) {
-  return common::Clamp(tsdf, kMinTSDF, kMaxTSDF);
-}
-// Clamps probability to be in the range [kMinTSDF, kMaxTSDF].
-inline float ClampWeight(const float tsdf) {
-  return common::Clamp(tsdf, kMinWeight, kMaxWeight);
-}
+  // Converts a weight to a uint16 in the [1, 32767] range.
+  inline uint16 WeightToValue(const float weight) const {
+    const int value =
+        common::RoundToInt((ClampWeight(weight) - kMinWeight) *
+                           (32766.f / (kMaxWeight - kMinWeight))) +
+        1;
+    // DCHECK for performance.
+    DCHECK_GE(value, 1);
+    DCHECK_LE(value, 32767);
+    return value;
+  }
 
-constexpr uint16 kUnknownTSDFValue = 0;
-constexpr uint16 kUnknownWeightValue = 0;
-constexpr uint16 kUpdateMarker = 1u << 15;
+  // Converts a uint16 (which may or may not have the update marker set) to a
+  // probability in the range [kMinProbability, kMaxProbability].
+  inline float ValueToTSDF(const uint16 value) const {
+    return kValueToTSDF[value];
 
-// Converts a tsdf to a uint16 in the [1, 32767] range.
-inline uint16 TSDFToValue(const float tsdf) {
-  const int value = common::RoundToInt((ClampTSDF(tsdf) - kMinTSDF) *
-                                       (32766.f / (kMaxTSDF - kMinTSDF))) +
-                    1;
-  // DCHECK for performance.
-  DCHECK_GE(value, 1);
-  DCHECK_LE(value, 32767);
-  return value;
-}
+  }  // Converts a uint16 (which may or may not have the update marker set) to a
+     // probability in the range [kMinProbability, kMaxProbability].
+  inline float ValueToWeight(const uint16 value) const {
+    return kValueToWeight[value];
+  }
 
-// Converts a weight to a uint16 in the [1, 32767] range.
-inline uint16 WeightToValue(const float weight) {
-  const int value = common::RoundToInt((ClampWeight(weight) - kMinWeight) *
-                                       (32766.f / (kMaxWeight - kMinWeight))) +
-                    1;
-  // DCHECK for performance.
-  DCHECK_GE(value, 1);
-  DCHECK_LE(value, 32767);
-  return value;
-}
+  uint16 getUnknownTSDFValue() const { return kUnknownTSDFValue; }
+  uint16 getUnknownWeightValue() const { return kUnknownWeightValue; }
+  uint16 getUpdateMarker() const { return kUpdateMarker; }
+  float getMaxTSDF() const { return kMaxTSDF; }
+  float getMinTSDF() const { return kMinTSDF; }
+  float getMaxWeight() const { return kMaxWeight; }
+  float getMinWeight() const { return kMinWeight; }
 
-extern const std::vector<float>* const kValueToTSDF;
-extern const std::vector<float>* const kValueToWeight;
+ private:
+  float SlowValueToTSDF(const uint16 value) const;
+  std::vector<float> PrecomputeValueToTSDF();
+  float SlowValueToWeight(const uint16 value) const;
+  std::vector<float> PrecomputeValueToWeight();
 
-// Converts a uint16 (which may or may not have the update marker set) to a
-// probability in the range [kMinProbability, kMaxProbability].
-inline float ValueToTSDF(const uint16 value) {
-  return (*kValueToTSDF)[value];
+  float kMaxTSDF;
+  float kMinTSDF;
+  float kMaxWeight;
+  static constexpr float kMinWeight = 0.f;
+  static constexpr uint16 kUnknownTSDFValue = 0;
+  static constexpr uint16 kUnknownWeightValue = 0;
+  static constexpr uint16 kUpdateMarker = 1u << 15;
 
-}  // Converts a uint16 (which may or may not have the update marker set) to a
-// probability in the range [kMinProbability, kMaxProbability].
-inline float ValueToWeight(const uint16 value) {
-  return (*kValueToWeight)[value];
-}
-
+  std::vector<float> kValueToTSDF;
+  std::vector<float> kValueToWeight;
+};
 }  // namespace mapping
 }  // namespace cartographer
 

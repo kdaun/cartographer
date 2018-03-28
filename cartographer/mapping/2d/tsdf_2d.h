@@ -24,6 +24,7 @@
 #include "cartographer/mapping/2d/map_limits.h"
 #include "cartographer/mapping/2d/proto/submap_2d.pb.h"
 #include "cartographer/mapping/2d/xy_index.h"
+#include "cartographer/mapping/tsdf_values.h"
 
 namespace cartographer {
 namespace mapping {
@@ -63,10 +64,11 @@ class TSDF2D : public Grid2D {
   proto::Submap2D ToProto() const;
 
  private:
-  std::vector<uint16> tsdf_cells_;    // Highest bit is update marker.
-  std::vector<uint16> weight_cells_;  // Highest bit is update marker.
   float truncation_distance_;
   float max_weight_;
+  TSDFValueHelper value_helper;
+  std::vector<uint16> tsdf_cells_;    // Highest bit is update marker.
+  std::vector<uint16> weight_cells_;  // Highest bit is update marker.
 };
 
 }  // namespace mapping

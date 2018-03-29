@@ -66,7 +66,7 @@ class PrecomputationGrid2D {
             static_cast<unsigned>(wide_limits_.num_x_cells) ||
         static_cast<unsigned>(local_xy_index.y()) >=
             static_cast<unsigned>(wide_limits_.num_y_cells)) {
-      return 255;
+      return 0;
     }
     const int stride = wide_limits_.num_x_cells;
     return cells_[local_xy_index.x() + local_xy_index.y() * stride];
@@ -118,7 +118,7 @@ class FastCorrelativeScanMatcher2D {
   // restricted to the configured search window. If a score above 'min_score'
   // (excluding equality) is possible, true is returned, and 'score' and
   // 'pose_estimate' are updated with the result.
-  bool MatchFullSubmap(const sensor::PointCloud& point_cloud, float max_score,
+  bool MatchFullSubmap(const sensor::PointCloud& point_cloud, float min_score,
                        float* score, transform::Rigid2d* pose_estimate) const;
 
  private:
@@ -128,7 +128,7 @@ class FastCorrelativeScanMatcher2D {
   bool MatchWithSearchParameters(
       SearchParameters search_parameters,
       const transform::Rigid2d& initial_pose_estimate,
-      const sensor::PointCloud& point_cloud, float max_score, float* score,
+      const sensor::PointCloud& point_cloud, float min_score, float* score,
       transform::Rigid2d* pose_estimate) const;
   std::vector<Candidate2D> ComputeLowestResolutionCandidates(
       const std::vector<DiscreteScan2D>& discrete_scans,
@@ -142,7 +142,7 @@ class FastCorrelativeScanMatcher2D {
   Candidate2D BranchAndBound(const std::vector<DiscreteScan2D>& discrete_scans,
                              const SearchParameters& search_parameters,
                              const std::vector<Candidate2D>& candidates,
-                             int candidate_depth, float max_score) const;
+                             int candidate_depth, float min_score) const;
 
   const proto::FastCorrelativeScanMatcherOptions2D options_;
   MapLimits limits_;

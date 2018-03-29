@@ -195,7 +195,7 @@ void ConstraintBuilder2D::ComputeConstraint(
     if (submap_scan_matcher->fast_correlative_scan_matcher->MatchFullSubmap(
             constant_data->filtered_gravity_aligned_point_cloud,
             options_.global_localization_min_score(), &score, &pose_estimate)) {
-      CHECK_LT(score, options_.global_localization_min_score());
+      CHECK_GT(score, options_.global_localization_min_score());
       CHECK_GE(node_id.trajectory_id, 0);
       CHECK_GE(submap_id.trajectory_id, 0);
       kGlobalConstraintsFoundMetric->Increment();
@@ -209,7 +209,7 @@ void ConstraintBuilder2D::ComputeConstraint(
             initial_pose, constant_data->filtered_gravity_aligned_point_cloud,
             options_.min_score(), &score, &pose_estimate)) {
       // We've reported a successful local match.
-      CHECK_LT(score, options_.min_score());
+      CHECK_GT(score, options_.min_score());
       kConstraintsFoundMetric->Increment();
       kConstraintScoresMetric->Observe(score);
     } else {

@@ -85,7 +85,7 @@ float TSDF2D::GetTSDF(const Eigen::Array2i& cell_index) const {
         tsdf_cells_[ToFlatIndex(cell_index, limits_)]);
   }
   return value_helper
-      .getMinTSDF();  // todo(kdaun) Think about something reasonable here
+      .getMaxTSDF();  // todo(kdaun) Think about something reasonable here
 }
 
 float TSDF2D::GetWeight(const Eigen::Array2i& cell_index) const {
@@ -117,8 +117,8 @@ float TSDF2D::GetMinWeight() const { return value_helper.getMinWeight(); }
 // Returns true if the probability at the specified index is known.
 bool TSDF2D::IsKnown(const Eigen::Array2i& cell_index) const {
   return limits_.Contains(cell_index) &&
-         tsdf_cells_[ToFlatIndex(cell_index, limits_)] !=
-             value_helper.getUnknownTSDFValue();
+         weight_cells_[ToFlatIndex(cell_index, limits_)] !=
+             value_helper.getUnknownWeightValue();
 }
 
 proto::Submap2D TSDF2D::ToProto() const {

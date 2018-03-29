@@ -91,19 +91,21 @@ void RangeDataInserter2DTSDF::UpdateCell(TSDF2D* const tsdf,
     update_weight = ComputeWeightQuadratic(update_sdf, ray_length);
   }
 
-  float updated_sdf = (tsdf->GetTSDF(cell) * tsdf->GetWeight(cell) +
-                       update_sdf * update_weight) /
-                      (tsdf->GetWeight(cell) + update_weight);
   float updated_weight = tsdf->GetWeight(cell) + update_weight;
+  float updated_sdf = updated_weight > 0.f
+                          ? (tsdf->GetTSDF(cell) * tsdf->GetWeight(cell) +
+                             update_sdf * update_weight) /
+                                updated_weight
+                          : tsdf->GetTSDF(cell);
   tsdf->UpdateCell(cell, updated_sdf, updated_weight);
 }
 
 float RangeDataInserter2DTSDF::ComputeWeightConstant(float sdf) const {
-  float behind_surface_factor = 0;
+  float behind_surface_factor = 1.0;
   if (-options_.tsdf().behind_surface_distance() > sdf) {
     behind_surface_factor = (sdf + options_.tsdf().truncation_distance()) /
-        (options_.tsdf().truncation_distance() -
-            options_.tsdf().behind_surface_distance());
+                            (options_.tsdf().truncation_distance() -
+                             options_.tsdf().behind_surface_distance());
   }
   return behind_surface_factor * options_.tsdf().update_weight();
 }

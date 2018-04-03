@@ -115,7 +115,6 @@ TEST_F(RangeDataInserterTest2DTSDF, InsertPointConstantIntegrator) {
         tsdf_.limits().GetCellIndex(Eigen::Vector2f(x, y));
     float expected_tsdf =
         std::max(std::min(3.5f - y, tsdf_.GetMaxTSDF()), tsdf_.GetMinTSDF());
-    float expected_weight = options_.tsdf().update_weight();
     EXPECT_TRUE(tsdf_.IsKnown(cell_index));
     EXPECT_NEAR(expected_tsdf, tsdf_.GetTSDF(cell_index), 1e-4);
     EXPECT_NEAR(tsdf_.GetMaxWeight(), tsdf_.GetWeight(cell_index), 1e-3);
@@ -147,7 +146,6 @@ TEST_F(RangeDataInserterTest2DTSDF, InsertPointLinearIntegrator) {
         tsdf_.limits().GetCellIndex(Eigen::Vector2f(x, y));
     float expected_tsdf =
         std::max(std::min(3.5f - y, tsdf_.GetMaxTSDF()), tsdf_.GetMinTSDF());
-    float expected_weight = options_.tsdf().update_weight();
     EXPECT_TRUE(tsdf_.IsKnown(cell_index));
     EXPECT_NEAR(expected_tsdf, tsdf_.GetTSDF(cell_index), 1e-4);
     EXPECT_NEAR(tsdf_.GetMaxWeight(), tsdf_.GetWeight(cell_index), 1e-3);
@@ -180,7 +178,6 @@ TEST_F(RangeDataInserterTest2DTSDF, InsertPointQuadraticIntegrator) {
         tsdf_.limits().GetCellIndex(Eigen::Vector2f(x, y));
     float expected_tsdf =
         std::max(std::min(3.5f - y, tsdf_.GetMaxTSDF()), tsdf_.GetMinTSDF());
-    float expected_weight = options_.tsdf().update_weight();
     EXPECT_TRUE(tsdf_.IsKnown(cell_index));
     EXPECT_NEAR(expected_tsdf, tsdf_.GetTSDF(cell_index), 1e-4);
     EXPECT_NEAR(tsdf_.GetMaxWeight(), tsdf_.GetWeight(cell_index), 1e-3);

@@ -43,4 +43,6 @@ message Submap2DTSDFDetails {
   // type.
   repeated int32 tsdf_cells = 1;
   repeated int32 weight_cells = 2;
+  double truncation_distance = 3;
+  double maximum_weight = 4;
 }

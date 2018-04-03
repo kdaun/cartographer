@@ -66,7 +66,7 @@ class TSDF2D : public Grid2D {
  private:
   float truncation_distance_;
   float max_weight_;
-  TSDFValueHelper value_helper;
+  std::unique_ptr<TSDFValueHelper> value_helper;
   std::vector<uint16> tsdf_cells_;    // Highest bit is update marker.
   std::vector<uint16> weight_cells_;  // Highest bit is update marker.
 };

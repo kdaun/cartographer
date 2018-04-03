@@ -84,8 +84,7 @@ float TSDF2D::GetTSDF(const Eigen::Array2i& cell_index) const {
     return value_helper.ValueToTSDF(
         tsdf_cells_[ToFlatIndex(cell_index, limits_)]);
   }
-  return value_helper
-      .getMaxTSDF();  // todo(kdaun) Think about something reasonable here
+  return value_helper.getMaxTSDF();
 }
 
 float TSDF2D::GetWeight(const Eigen::Array2i& cell_index) const {

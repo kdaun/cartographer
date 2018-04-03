@@ -79,31 +79,28 @@ class OccupiedSpaceCostFunction2D {
    public:
     enum { DATA_DIMENSION = 1 };
 
-    explicit GridArrayAdapter(const Grid2D& probability_grid)
-        : probability_grid_(probability_grid) {}
+    explicit GridArrayAdapter(const Grid2D& grid) : grid_(grid) {}
 
     void GetValue(const int row, const int column, double* const value) const {
       if (row < kPadding || column < kPadding || row >= NumRows() - kPadding ||
           column >= NumCols() - kPadding) {
-        *value = kMinProbability;
+        *value = grid_.GetMaxCorrespondenceCost();
       } else {
-        *value = static_cast<double>(probability_grid_.GetCorrespondenceCost(
+        *value = static_cast<double>(grid_.GetCorrespondenceCost(
             Eigen::Array2i(column - kPadding, row - kPadding)));
       }
     }
 
     int NumRows() const {
-      return probability_grid_.limits().cell_limits().num_y_cells +
-             2 * kPadding;
+      return grid_.limits().cell_limits().num_y_cells + 2 * kPadding;
     }
 
     int NumCols() const {
-      return probability_grid_.limits().cell_limits().num_x_cells +
-             2 * kPadding;
+      return grid_.limits().cell_limits().num_x_cells + 2 * kPadding;
     }
 
    private:
-    const Grid2D& probability_grid_;
+    const Grid2D& grid_;
   };
 
   OccupiedSpaceCostFunction2D(const double scaling_factor,

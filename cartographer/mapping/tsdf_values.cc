@@ -32,7 +32,7 @@ float TSDFValueHelper::SlowValueToTSDF(const uint16 value) const {
   CHECK_LE(value, 32767);
   if (value == kUnknownTSDFValue) {
     // Unknown cells have kMinProbability.
-    return kMaxTSDF;  // todo(kdaun) discuss reasonable value
+    return kMaxTSDF;
   }
   const float kScale = (kMaxTSDF - kMinTSDF) / 32766.f;
   return value * kScale + (kMinTSDF - kScale);
@@ -56,7 +56,7 @@ float TSDFValueHelper::SlowValueToWeight(const uint16 value) const {
   CHECK_LE(value, 32767);
   if (value == kUnknownWeightValue) {
     // Unknown cells have kMinWeight.
-    return kMinWeight;  // todo(kdaun) discuss reasonable value
+    return kMinWeight;
   }
   const float kScale = (kMaxWeight - kMinWeight) / 32766.f;
   return value * kScale + (kMinWeight - kScale);

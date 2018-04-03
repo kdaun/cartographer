@@ -15,9 +15,11 @@
  */
 
 #include "cartographer/io/submap_painter.h"
-#include <cartographer/mapping/2d/submap_2d_probability_grid.h>
+#include <cartographer/mapping/2d/submap_2d_tsdf.h>
 
+#include "cartographer/mapping/2d/proto/submap_2d.pb.h"
 #include "cartographer/mapping/2d/submap_2d.h"
+#include "cartographer/mapping/2d/submap_2d_probability_grid.h"
 #include "cartographer/mapping/3d/submap_3d.h"
 
 namespace cartographer {
@@ -113,16 +115,25 @@ void FillSubmapSlice(
     const ::cartographer::mapping::proto::Submap& proto,
     SubmapSlice* const submap_slice) {
   ::cartographer::mapping::proto::SubmapQuery::Response response;
-  ::cartographer::transform::Rigid3d local_pose;
   if (proto.has_submap_3d()) {
     mapping::Submap3D submap(proto);
-    local_pose = submap.local_pose();
     submap.ToResponseProto(global_submap_pose, &response);
   } else {
-    ::cartographer::mapping::Submap2DProbabilityGrid submap(
-        proto);  // TODO(kdaun) check submap type
-    local_pose = submap.local_pose();
-    submap.ToResponseProto(global_submap_pose, &response);
+    if (proto.submap_2d()
+            .details()
+            .Is<::cartographer::mapping::proto::
+                    Submap2DProbabilityGridDetails>()) {
+      ::cartographer::mapping::Submap2DProbabilityGrid submap(proto);
+      submap.ToResponseProto(global_submap_pose, &response);
+    } else if (proto.submap_2d()
+                   .details()
+                   .Is<::cartographer::mapping::proto::Submap2DTSDFDetails>()) {
+      ::cartographer::mapping::Submap2DTSDF submap(proto);
+      submap.ToResponseProto(global_submap_pose, &response);
+    } else {
+      CHECK(false) << "Unknown proto details: "
+                   << proto.submap_2d().details().GetTypeName();
+    }
   }
   submap_slice->pose = global_submap_pose;
 

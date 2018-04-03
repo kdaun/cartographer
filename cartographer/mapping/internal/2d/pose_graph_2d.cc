@@ -32,6 +32,7 @@
 #include "cartographer/common/make_unique.h"
 #include "cartographer/common/math.h"
 #include "cartographer/mapping/2d/submap_2d_probability_grid.h"
+#include "cartographer/mapping/2d/submap_2d_tsdf.h"
 #include "cartographer/mapping/pose_graph/proto/constraint_builder_options.pb.h"
 #include "cartographer/sensor/compressed_point_cloud.h"
 #include "cartographer/sensor/internal/voxel_filter.h"
@@ -432,9 +433,26 @@ void PoseGraph2D::AddSubmapFromProto(
 
   const SubmapId submap_id = {submap_with_id.submap_id().trajectory_id(),
                               submap_with_id.submap_id().submap_index()};
-  std::shared_ptr<const Submap2D> submap_ptr =
-      std::make_shared<const Submap2DProbabilityGrid>(
-          submap_with_id.submap());  // TODO(kdaun) check submap type
+  std::shared_ptr<const Submap2D> submap_ptr;
+
+  if (submap_with_id.submap()
+          .submap_2d()
+          .details()
+          .Is<::cartographer::mapping::proto::
+                  Submap2DProbabilityGridDetails>()) {
+    submap_ptr = std::make_shared<mapping::Submap2DProbabilityGrid>(
+        submap_with_id.submap());
+  } else if (submap_with_id.submap()
+                 .submap_2d()
+                 .details()
+                 .Is<::cartographer::mapping::proto::Submap2DTSDFDetails>()) {
+    submap_ptr =
+        std::make_shared<mapping::Submap2DTSDF>(submap_with_id.submap());
+  } else {
+    CHECK(false) << "Unknown proto details: "
+                 << submap_with_id.submap().submap_2d().details().GetTypeName();
+  }
+
   const transform::Rigid2d global_submap_pose_2d =
       transform::Project2D(global_submap_pose);
 

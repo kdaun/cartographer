@@ -51,15 +51,25 @@ TEST(MapLimitsTest, ProtoConstructor) {
 TEST(MapLimitsTest, ConstructAndGet) {
   const MapLimits limits(42., Eigen::Vector2d(3., 0.), CellLimits(2, 3));
 
-  const CellLimits& cell_limits = limits.cell_limits();
-  EXPECT_EQ(2, cell_limits.num_x_cells);
-  EXPECT_EQ(3, cell_limits.num_y_cells);
+  Eigen::Array2i cell_idx = limits.GetCellIndex({-1.f, -1.f});
+  EXPECT_NEAR(limits.GetCellCenter(cell_idx)[0], -18.f, 1e-5);
+  EXPECT_NEAR(limits.GetCellCenter(cell_idx)[1], -21.f, 1e-5);
 
-  const Eigen::Vector2d& max = limits.max();
-  EXPECT_EQ(3., max.x());
-  EXPECT_EQ(0., max.y());
+  cell_idx = limits.GetCellIndex({2.9f, -0.1f});
+  EXPECT_NEAR(limits.GetCellCenter(cell_idx)[0], -18.f, 1e-5);
+  EXPECT_NEAR(limits.GetCellCenter(cell_idx)[1], -21.f, 1e-5);
 
-  EXPECT_EQ(42., limits.resolution());
+  cell_idx = limits.GetCellIndex({-38.9f, -41.9f});
+  EXPECT_NEAR(limits.GetCellCenter(cell_idx)[0], -18.f, 1e-5);
+  EXPECT_NEAR(limits.GetCellCenter(cell_idx)[1], -21.f, 1e-5);
+
+  cell_idx = limits.GetCellIndex({-50.f, -0.1f});
+  EXPECT_NEAR(limits.GetCellCenter(cell_idx)[0], -60.f, 1e-5);
+  EXPECT_NEAR(limits.GetCellCenter(cell_idx)[1], -21.f, 1e-5);
+
+  cell_idx = limits.GetCellIndex({2.9f, -50.f});
+  EXPECT_NEAR(limits.GetCellCenter(cell_idx)[0], -18.f, 1e-5);
+  EXPECT_NEAR(limits.GetCellCenter(cell_idx)[1], -63.f, 1e-5);
 }
 
 }  // namespace

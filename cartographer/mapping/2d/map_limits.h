@@ -75,8 +75,7 @@ class MapLimits {
         common::RoundToInt((max_.x() - point.x()) / resolution_ - 0.5));
   }
 
-  Eigen::Vector2f GetCellCenter(
-      const Eigen::Array2i cell_index) const {  // TODO(kdaun) write test
+  Eigen::Vector2f GetCellCenter(const Eigen::Array2i cell_index) const {
     return {max_.x() - resolution() * (cell_index[1] + 0.5),
             max_.y() - resolution() * (cell_index[0] + 0.5)};
   }

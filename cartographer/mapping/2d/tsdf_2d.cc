@@ -72,9 +72,10 @@ void TSDF2D::FinishUpdate() {
 void TSDF2D::SetCell(const Eigen::Array2i& cell_index, const float tsdf,
                      const float weight) {
   uint16& cell_tsdf = tsdf_cells_[ToFlatIndex(cell_index, limits_)];
-  // CHECK_EQ(cell, kUnknownProbabilityValue);
+  CHECK_EQ(cell_tsdf, value_helper->getUnknownTSDFValue());
   cell_tsdf = value_helper->TSDFToValue(tsdf);
   uint16& cell_weight = weight_cells_[ToFlatIndex(cell_index, limits_)];
+  CHECK_EQ(cell_weight, value_helper->getUnknownWeightValue());
   cell_weight = value_helper->WeightToValue(weight);
   known_cells_box_.extend(cell_index.matrix());
 }
@@ -87,10 +88,10 @@ bool TSDF2D::UpdateCell(const Eigen::Array2i& cell_index,
   if (*tsdf_cell < value_helper->getUpdateMarker()) {
     update_indices_.push_back(flat_index);
     known_cells_box_.extend(cell_index.matrix());
+    *tsdf_cell =
+        value_helper->TSDFToValue(updated_sdf) + value_helper->getUpdateMarker();
+    *weight_cell = value_helper->WeightToValue(updated_weight);
   }
-  *tsdf_cell =
-      value_helper->TSDFToValue(updated_sdf) + value_helper->getUpdateMarker();
-  *weight_cell = value_helper->WeightToValue(updated_weight);
   return true;
 }
 
@@ -99,7 +100,7 @@ float TSDF2D::GetTSDF(const Eigen::Array2i& cell_index) const {
     return value_helper->ValueToTSDF(
         tsdf_cells_[ToFlatIndex(cell_index, limits_)]);
   }
-  return value_helper->getMaxTSDF();
+  return value_helper->getMinTSDF();
 }
 
 float TSDF2D::GetWeight(const Eigen::Array2i& cell_index) const {

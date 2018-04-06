@@ -29,6 +29,35 @@ namespace cartographer {
 namespace mapping {
 namespace scan_matching {
 
+class GridArrayAdapter {
+ public:
+  enum { DATA_DIMENSION = 1 };
+
+  explicit GridArrayAdapter(const Grid2D& grid) : grid_(grid) {}
+
+  void GetValue(const int row, const int column, double* const value) const {
+    if (row < kPadding || column < kPadding || row >= NumRows() - kPadding ||
+        column >= NumCols() - kPadding) {
+      *value = grid_.GetMaxCorrespondenceCost();
+    } else {
+      *value = static_cast<double>(grid_.GetCorrespondenceCost(
+          Eigen::Array2i(column - kPadding, row - kPadding)));
+    }
+  }
+
+  int NumRows() const {
+    return grid_.limits().cell_limits().num_y_cells + 2 * kPadding;
+  }
+
+  int NumCols() const {
+    return grid_.limits().cell_limits().num_x_cells + 2 * kPadding;
+  }
+
+ private:
+  static constexpr int kPadding = INT_MAX / 4;
+  const Grid2D& grid_;
+};
+
 // Computes a cost for matching the 'point_cloud' to the 'grid' with
 // a 'pose'. The cost increases when points fall into less occupied space, i.e.
 // at pixels with lower values.
@@ -75,33 +104,6 @@ class OccupiedSpaceCostFunction2D {
 
  private:
   static constexpr int kPadding = INT_MAX / 4;
-  class GridArrayAdapter {
-   public:
-    enum { DATA_DIMENSION = 1 };
-
-    explicit GridArrayAdapter(const Grid2D& grid) : grid_(grid) {}
-
-    void GetValue(const int row, const int column, double* const value) const {
-      if (row < kPadding || column < kPadding || row >= NumRows() - kPadding ||
-          column >= NumCols() - kPadding) {
-        *value = grid_.GetMaxCorrespondenceCost();
-      } else {
-        *value = static_cast<double>(grid_.GetCorrespondenceCost(
-            Eigen::Array2i(column - kPadding, row - kPadding)));
-      }
-    }
-
-    int NumRows() const {
-      return grid_.limits().cell_limits().num_y_cells + 2 * kPadding;
-    }
-
-    int NumCols() const {
-      return grid_.limits().cell_limits().num_x_cells + 2 * kPadding;
-    }
-
-   private:
-    const Grid2D& grid_;
-  };
 
   OccupiedSpaceCostFunction2D(const double scaling_factor,
                               const sensor::PointCloud& point_cloud,

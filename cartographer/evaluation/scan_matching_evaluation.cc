@@ -1,36 +1,132 @@
 #include <cartographer/mapping/2d/scan_matching/proto/ceres_scan_matcher_options_2d.pb.h>
 
+#include <random>
+
+#include "cairo.h"
+
 #include "cartographer/common/lua_parameter_dictionary.h"
 #include "cartographer/common/lua_parameter_dictionary_test_helpers.h"
 #include "cartographer/common/make_unique.h"
 #include "cartographer/evaluation/scan_cloud_generator.h"
+#include "cartographer/mapping/2d/probability_grid.h"
 #include "cartographer/mapping/2d/range_data_inserter_2d.h"
 #include "cartographer/mapping/2d/range_data_inserter_2d_probability_grid.h"
 #include "cartographer/mapping/2d/range_data_inserter_2d_tsdf.h"
 #include "cartographer/mapping/internal/2d/scan_matching/ceres_scan_matcher_2d.h"
 #include "cartographer/mapping/internal/2d/scan_matching/occupied_space_cost_function_2d.h"
 
-#include "cartographer/mapping/2d/probability_grid.h"
-
-#include "cairo.h"
-
 namespace cartographer {
 namespace evaluation {
 
-void RunScanMatchingEvaluation() {
-  cartographer::sensor::PointCloud scan_cloud;
-  ScanCloudGenerator test_set_generator(0.01);
-  test_set_generator.generateRectangle(scan_cloud, 1.0, 0.5);
+struct Sample {
+  cartographer::sensor::RangeData range_data;
+  cartographer::transform::Rigid2d ground_truth_pose;
+};
 
+void GenerateRangeData(const ScanCloudGenerator::ModelType model_type,
+                       const Eigen::Vector2d size, const double resolution,
+                       cartographer::sensor::RangeData& range_data) {
+  cartographer::sensor::PointCloud scan_cloud;
+  ScanCloudGenerator test_set_generator(resolution);
+  switch (model_type) {
+    case ScanCloudGenerator::ModelType::CIRCLE:
+      test_set_generator.generateCircle(scan_cloud, size[0]);
+    case ScanCloudGenerator::ModelType::SQUARE:
+      test_set_generator.generateSquare(scan_cloud, size[0]);
+    case ScanCloudGenerator::ModelType::RECTANGLE:
+      test_set_generator.generateRectangle(scan_cloud, size[0], size[1]);
+      range_data.returns = scan_cloud;
+      range_data.origin = Eigen::Vector3f{0, 0, 0};
+  }
+}
+
+Sample GenerateSample(double error_trans,
+                      const ScanCloudGenerator::ModelType model_type,
+                      const Eigen::Vector2d size, const double resolution) {
+  cartographer::sensor::RangeData range_data;
+  GenerateRangeData(model_type, size, resolution, range_data);
+
+  std::random_device rd;
+  std::default_random_engine e1(rd());
+  std::uniform_real_distribution<double> error_distribution_translation(
+      error_trans - resolution / 2., error_trans - resolution / 2.);
+  std::uniform_real_distribution<double> error_translation_direction(-M_PI,
+                                                                     M_PI);
+  double orientation = error_translation_direction(e1);
+  double scale = error_trans == 0.0 ? 0.0 : error_distribution_translation(e1);
+  double x = std::cos(orientation) * scale;
+  double y = std::sin(orientation) * scale;
+  Sample sample;
+  sample.ground_truth_pose =
+      cartographer::transform::Rigid2d::Translation({x, y});
+  sensor::RangeData initial_pose_estimate_range_data =
+      cartographer::sensor::TransformRangeData(
+          range_data,
+          transform::Embed3D(sample.ground_truth_pose.cast<float>()));
+  sample.range_data = range_data;
+  return sample;
+}
+
+void GenerateSampleSet(int n_training, int n_test, double error_trans,
+                       const ScanCloudGenerator::ModelType model_type,
+                       const Eigen::Vector2d size, const double resolution,
+                       std::vector<Sample>& training_set,
+                       std::vector<Sample>& test_set) {
+  for (int i = 0; i < n_training; ++i) {
+    training_set.push_back(GenerateSample(0.0, model_type, size, resolution));
+  }
+  for (int i = 0; i < n_test; ++i) {
+    test_set.push_back(
+        GenerateSample(error_trans, model_type, size, resolution));
+  }
+}
+
+template <typename GridType, typename RangeDataInserter>
+void EvaluateScanMatcher(
+    const std::vector<Sample>& training_set,
+    const std::vector<Sample>& test_set,
+    const cartographer::mapping::proto::RangeDataInserterOptions2D&
+        range_data_inserter_options,
+    const cartographer::mapping::scan_matching::proto::
+        CeresScanMatcherOptions2D& ceres_scan_matcher_options) {
+  RangeDataInserter range_data_inserter(range_data_inserter_options);
+
+  GridType grid(cartographer::mapping::MapLimits(
+      0.05, Eigen::Vector2d(1., 1.),
+      cartographer::mapping::CellLimits(40, 40)));
+
+  for (auto sample : training_set) {
+    range_data_inserter.Insert(sample.range_data, &grid);
+  }
+
+  for (auto sample : test_set) {
+    MatchScan(sample, ceres_scan_matcher_options, grid);
+  }
+  // todo ComputeStatistics();
+}
+
+template <typename GridType>
+void MatchScan(const Sample& sample,
+               const cartographer::mapping::scan_matching::proto::
+                   CeresScanMatcherOptions2D& ceres_scan_matcher_options,
+               GridType& grid) {
+  cartographer::mapping::scan_matching::CeresScanMatcher2D scan_matcher(
+      ceres_scan_matcher_options);
+
+  const Eigen::Vector2d target_translation = {0., 0.};
   const cartographer::transform::Rigid2d initial_pose_estimate =
       cartographer::transform::Rigid2d::Translation({0.05, 0.05});
-  const Eigen::Vector2d target_translation = {0., 0.};
   cartographer::transform::Rigid2d matched_pose_estimate;
   ceres::Solver::Summary summary;
-  cartographer::mapping::ProbabilityGrid probability_grid(
-      cartographer::mapping::MapLimits(
-          0.05, Eigen::Vector2d(1., 1.),
-          cartographer::mapping::CellLimits(40, 40)));
+
+  scan_matcher.Match(target_translation, initial_pose_estimate,
+                     sample.range_data.returns, grid, &matched_pose_estimate,
+                     &summary);
+  LOG(INFO) << summary.FullReport();
+  LOG(INFO) << "matched_pose_estimate " << matched_pose_estimate;
+}
+
+void RunScanMatchingEvaluation() {
   cartographer::mapping::proto::RangeDataInserterOptions2D
       range_data_inserter_options;
   auto parameter_dictionary_range_data_inserter = common::MakeDictionary(
@@ -51,16 +147,6 @@ void RunScanMatchingEvaluation() {
   range_data_inserter_options =
       cartographer::mapping::CreateRangeDataInserterOptions2D(
           parameter_dictionary_range_data_inserter.get());
-  cartographer::mapping::RangeDataInserter2DProbabilityGrid range_data_inserter(
-      range_data_inserter_options);
-
-  cartographer::sensor::RangeData range_data;
-  range_data.returns = scan_cloud;
-  range_data.origin = Eigen::Vector3f{0, 0, 0};
-
-  for (int i = 0; i < 10; ++i) {
-    range_data_inserter.Insert(range_data, &probability_grid);
-  }
   auto parameter_dictionary = common::MakeDictionary(R"text(
         return {
           occupied_space_weight = 1.,
@@ -76,14 +162,24 @@ void RunScanMatchingEvaluation() {
       ceres_scan_matcher_options =
           cartographer::mapping::scan_matching::CreateCeresScanMatcherOptions2D(
               parameter_dictionary.get());
-
-  cartographer::mapping::scan_matching::CeresScanMatcher2D scan_matcher(
+  int n_training = 1;
+  int n_test = 1;
+  double error_trans = 0.05;
+  const ScanCloudGenerator::ModelType model_type =
+      ScanCloudGenerator::ModelType::RECTANGLE;
+  const Eigen::Vector2d size = {0.2, 0.4};
+  const double resolution = 0.05;
+  std::vector<Sample> training_set;
+  std::vector<Sample> test_set;
+  GenerateSampleSet(n_training, n_test, error_trans, model_type, size,
+                    resolution, training_set, test_set);
+  EvaluateScanMatcher<
+      cartographer::mapping::ProbabilityGrid,
+      cartographer::mapping::RangeDataInserter2DProbabilityGrid>(
+      training_set, test_set, range_data_inserter_options,
       ceres_scan_matcher_options);
-  scan_matcher.Match(target_translation, initial_pose_estimate, scan_cloud,
-                     probability_grid, &matched_pose_estimate, &summary);
-  LOG(INFO) << summary.FullReport();
-  LOG(INFO) << "matched_pose_estimate " << matched_pose_estimate;
 
+  /*
   sensor::RangeData initial_pose_estimate_range_data =
       cartographer::sensor::TransformRangeData(
           range_data, transform::Embed3D(initial_pose_estimate.cast<float>()));
@@ -172,6 +268,7 @@ void RunScanMatchingEvaluation() {
   LOG(INFO) << "interpolated_grid: "
             << cairo_surface_write_to_png(interpolated_grid_surface,
                                           "interpolated_grid_with.png");
+                                          */
 }
 
 }  // namespace evaluation

@@ -14,6 +14,8 @@ class ScanCloudGenerator {
                          float size_y);
   void generateCircle(cartographer::sensor::PointCloud& cloud, float radius);
 
+  enum class ModelType { SQUARE, RECTANGLE, CIRCLE };
+
  private:
   float resolution_;
 };

@@ -23,6 +23,17 @@ struct Sample {
   cartographer::transform::Rigid2d ground_truth_pose;
 };
 
+struct SampleResult {
+  double initial_trans_error;
+  double initial_rot_error;
+  double matching_trans_error;
+  double matching_rot_error;
+  double matching_time;
+  int matching_iterations;
+};
+static std::random_device rd;
+static std::default_random_engine e1(rd());
+
 void GenerateRangeData(const ScanCloudGenerator::ModelType model_type,
                        const Eigen::Vector2d size, const double resolution,
                        cartographer::sensor::RangeData& range_data) {
@@ -46,8 +57,6 @@ Sample GenerateSample(double error_trans,
   cartographer::sensor::RangeData range_data;
   GenerateRangeData(model_type, size, resolution, range_data);
 
-  std::random_device rd;
-  std::default_random_engine e1(rd());
   std::uniform_real_distribution<double> error_distribution_translation(
       error_trans - resolution / 2., error_trans - resolution / 2.);
   std::uniform_real_distribution<double> error_translation_direction(-M_PI,
@@ -80,6 +89,26 @@ void GenerateSampleSet(int n_training, int n_test, double error_trans,
         GenerateSample(error_trans, model_type, size, resolution));
   }
 }
+template <typename GridType>
+std::unique_ptr<GridType> generateGrid() {
+  std::unique_ptr<GridType> grid =
+      common::make_unique<GridType>(cartographer::mapping::MapLimits(
+          0.05, Eigen::Vector2d(1., 1.),
+          cartographer::mapping::CellLimits(40, 40)));
+  return std::move(grid);
+}
+
+template <>
+std::unique_ptr<cartographer::mapping::TSDF2D>
+generateGrid<cartographer::mapping::TSDF2D>() {
+  std::unique_ptr<cartographer::mapping::TSDF2D> grid =
+      common::make_unique<cartographer::mapping::TSDF2D>(
+          cartographer::mapping::MapLimits(
+              0.05, Eigen::Vector2d(1., 1.),
+              cartographer::mapping::CellLimits(40, 40)),
+          0.3, 1.0);
+  return std::move(grid);
+}
 
 template <typename GridType, typename RangeDataInserter>
 void EvaluateScanMatcher(
@@ -88,42 +117,54 @@ void EvaluateScanMatcher(
     const cartographer::mapping::proto::RangeDataInserterOptions2D&
         range_data_inserter_options,
     const cartographer::mapping::scan_matching::proto::
-        CeresScanMatcherOptions2D& ceres_scan_matcher_options) {
+        CeresScanMatcherOptions2D& ceres_scan_matcher_options,
+    std::vector<SampleResult> results) {
   RangeDataInserter range_data_inserter(range_data_inserter_options);
 
-  GridType grid(cartographer::mapping::MapLimits(
-      0.05, Eigen::Vector2d(1., 1.),
-      cartographer::mapping::CellLimits(40, 40)));
+  std::unique_ptr<GridType> grid = generateGrid<GridType>();
 
   for (auto sample : training_set) {
-    range_data_inserter.Insert(sample.range_data, &grid);
+    range_data_inserter.Insert(sample.range_data, grid.get());
   }
 
   for (auto sample : test_set) {
-    MatchScan(sample, ceres_scan_matcher_options, grid);
+    SampleResult sample_result;
+    MatchScan(sample, ceres_scan_matcher_options, *grid.get(), &sample_result);
   }
-  // todo ComputeStatistics();
 }
 
 template <typename GridType>
 void MatchScan(const Sample& sample,
                const cartographer::mapping::scan_matching::proto::
                    CeresScanMatcherOptions2D& ceres_scan_matcher_options,
-               GridType& grid) {
+               const GridType& grid, SampleResult* sample_result) {
   cartographer::mapping::scan_matching::CeresScanMatcher2D scan_matcher(
       ceres_scan_matcher_options);
 
   const Eigen::Vector2d target_translation = {0., 0.};
   const cartographer::transform::Rigid2d initial_pose_estimate =
-      cartographer::transform::Rigid2d::Translation({0.05, 0.05});
+      cartographer::transform::Rigid2d::Translation({0.0, 0.0});
   cartographer::transform::Rigid2d matched_pose_estimate;
   ceres::Solver::Summary summary;
 
   scan_matcher.Match(target_translation, initial_pose_estimate,
                      sample.range_data.returns, grid, &matched_pose_estimate,
                      &summary);
-  LOG(INFO) << summary.FullReport();
-  LOG(INFO) << "matched_pose_estimate " << matched_pose_estimate;
+  const auto initial_error =
+      initial_pose_estimate * sample.ground_truth_pose.inverse();
+  const auto matching_error =
+      matched_pose_estimate * sample.ground_truth_pose.inverse();
+  sample_result->initial_trans_error = initial_error.translation().norm();
+  sample_result->matching_trans_error = matching_error.translation().norm();
+  sample_result->initial_rot_error = initial_error.rotation().smallestAngle();
+  sample_result->matching_rot_error = matching_error.rotation().smallestAngle();
+  sample_result->matching_iterations =
+      summary.num_successful_steps + summary.num_unsuccessful_steps;
+  sample_result->matching_time = summary.minimizer_time_in_seconds;
+  LOG(INFO) << "Matching error " << sample_result->matching_trans_error << " \t"
+            << sample_result->initial_trans_error << " \t"
+            << sample_result->matching_iterations << " \t"
+            << sample_result->matching_time;
 }
 
 void RunScanMatchingEvaluation() {
@@ -162,22 +203,29 @@ void RunScanMatchingEvaluation() {
       ceres_scan_matcher_options =
           cartographer::mapping::scan_matching::CreateCeresScanMatcherOptions2D(
               parameter_dictionary.get());
-  int n_training = 1;
-  int n_test = 1;
+  int n_training = 5;
+  int n_test = 5;
   double error_trans = 0.05;
   const ScanCloudGenerator::ModelType model_type =
       ScanCloudGenerator::ModelType::RECTANGLE;
-  const Eigen::Vector2d size = {0.2, 0.4};
+  const Eigen::Vector2d size = {0.6, 0.6};
   const double resolution = 0.05;
   std::vector<Sample> training_set;
   std::vector<Sample> test_set;
   GenerateSampleSet(n_training, n_test, error_trans, model_type, size,
                     resolution, training_set, test_set);
+  std::vector<SampleResult> probability_grid_results;
+  LOG(INFO) << "Evaluating probability grid:";
   EvaluateScanMatcher<
       cartographer::mapping::ProbabilityGrid,
       cartographer::mapping::RangeDataInserter2DProbabilityGrid>(
       training_set, test_set, range_data_inserter_options,
-      ceres_scan_matcher_options);
+      ceres_scan_matcher_options, probability_grid_results);
+  LOG(INFO) << "Evaluating TSDF:";
+  EvaluateScanMatcher<cartographer::mapping::TSDF2D,
+                      cartographer::mapping::RangeDataInserter2DTSDF>(
+      training_set, test_set, range_data_inserter_options,
+      ceres_scan_matcher_options, probability_grid_results);
 
   /*
   sensor::RangeData initial_pose_estimate_range_data =

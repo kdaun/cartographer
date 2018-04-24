@@ -5,6 +5,8 @@
 namespace cartographer {
 namespace evaluation {
 
+static std::default_random_engine e1(42);
+
 ScanCloudGenerator::ScanCloudGenerator() : resolution_(0.025) {}
 
 ScanCloudGenerator::ScanCloudGenerator(float resolution)
@@ -18,7 +20,7 @@ void ScanCloudGenerator::generateSquare(cartographer::sensor::PointCloud& cloud,
 void ScanCloudGenerator::generateRectangle(
     cartographer::sensor::PointCloud& cloud, float size_x, float size_y) {
   // std::random_device r;
-  std::default_random_engine e1(42);
+  //
   std::normal_distribution<float> normal_distribution(0, 0.01);
 
   cloud.clear();
@@ -48,7 +50,7 @@ void ScanCloudGenerator::generateRectangle(
 void ScanCloudGenerator::generateCircle(cartographer::sensor::PointCloud& cloud,
                                         float radius) {
   // std::random_device r;
-  std::default_random_engine e1(42);
+  // std::default_random_engine e1(42);
   std::normal_distribution<float> normal_distribution(0, 0.01);
 
   cloud.clear();

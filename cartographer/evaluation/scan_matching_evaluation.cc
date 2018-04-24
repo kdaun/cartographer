@@ -1,12 +1,14 @@
 #include <cartographer/mapping/2d/scan_matching/proto/ceres_scan_matcher_options_2d.pb.h>
 
 #include <random>
+#include <string>
 
 #include "cairo.h"
 
 #include "cartographer/common/lua_parameter_dictionary.h"
 #include "cartographer/common/lua_parameter_dictionary_test_helpers.h"
 #include "cartographer/common/make_unique.h"
+#include "cartographer/common/time.h"
 #include "cartographer/evaluation/scan_cloud_generator.h"
 #include "cartographer/mapping/2d/probability_grid.h"
 #include "cartographer/mapping/2d/range_data_inserter_2d.h"
@@ -32,7 +34,7 @@ struct SampleResult {
   int matching_iterations;
 };
 static std::random_device rd;
-static std::default_random_engine e1(rd());
+static std::default_random_engine e1(42);
 
 void GenerateRangeData(const ScanCloudGenerator::ModelType model_type,
                        const Eigen::Vector2d size, const double resolution,
@@ -58,7 +60,7 @@ Sample GenerateSample(double error_trans,
   GenerateRangeData(model_type, size, resolution, range_data);
 
   std::uniform_real_distribution<double> error_distribution_translation(
-      error_trans - resolution / 2., error_trans - resolution / 2.);
+      error_trans - resolution / 2., error_trans + resolution / 2.);
   std::uniform_real_distribution<double> error_translation_direction(-M_PI,
                                                                      M_PI);
   double orientation = error_translation_direction(e1);
@@ -72,7 +74,7 @@ Sample GenerateSample(double error_trans,
       cartographer::sensor::TransformRangeData(
           range_data,
           transform::Embed3D(sample.ground_truth_pose.cast<float>()));
-  sample.range_data = range_data;
+  sample.range_data = initial_pose_estimate_range_data;
   return sample;
 }
 
@@ -108,6 +110,126 @@ generateGrid<cartographer::mapping::TSDF2D>() {
               cartographer::mapping::CellLimits(40, 40)),
           0.3, 1.0);
   return std::move(grid);
+}
+
+static int rendered_grid_id = 0;
+void renderGridwithScan(
+    const cartographer::mapping::ProbabilityGrid& grid, const Sample& sample,
+    const cartographer::transform::Rigid2d initial_transform,
+    const cartographer::transform::Rigid2d matched_transform) {
+
+    sensor::RangeData initial_pose_estimate_range_data =
+        cartographer::sensor::TransformRangeData(
+            sample.range_data,
+    transform::Embed3D(initial_transform.cast<float>()));
+    sensor::RangeData
+    matched_range_data = cartographer::sensor::TransformRangeData( sample.range_data,
+    transform::Embed3D(matched_transform.cast<float>()));
+
+  const cartographer::mapping::MapLimits& limits = grid.limits();
+  double scale = 1. / limits.resolution();
+  cairo_surface_t* grid_surface;
+  cairo_t* grid_surface_context;
+
+  int scaled_num_x_cells = limits.cell_limits().num_x_cells * scale;
+  int scaled_num_y_cells = limits.cell_limits().num_y_cells * scale;
+  grid_surface = cairo_image_surface_create(
+      CAIRO_FORMAT_ARGB32, scaled_num_x_cells, scaled_num_y_cells);
+  grid_surface_context = cairo_create(grid_surface);
+  cairo_device_to_user_distance(grid_surface_context, &scale, &scale);
+  for (int ix = 0; ix < scaled_num_x_cells; ++ix) {
+    for (int iy = 0; iy < scaled_num_y_cells; ++iy) {
+      float p = 1. - grid.GetProbability({iy, ix});
+      cairo_set_source_rgb(grid_surface_context, p, p, p);
+      cairo_rectangle(grid_surface_context, scale * (float(ix)),
+                      scale * ((float)iy), scale, scale);
+      cairo_fill(grid_surface_context);
+    }
+  }
+
+  cairo_set_source_rgb(grid_surface_context, 0.8, 0.0, 0);
+  for (auto& scan : initial_pose_estimate_range_data.returns) {
+    float x = scale * (limits.max().x() - scan[0]);
+    float y = scale * (limits.max().y() - scan[1]);
+    cairo_rectangle(grid_surface_context, (x - 0.15) * scale,
+                    (y - 0.15) * scale, 0.3 * scale, 0.3 * scale);
+  }
+  cairo_fill(grid_surface_context);
+
+  cairo_set_source_rgb(grid_surface_context, 0.0, 0.8, 0);
+  for (auto& scan : matched_range_data.returns) {
+    float x = scale * (limits.max().x() - scan[0]);
+    float y = scale * (limits.max().y() - scan[1]);
+    cairo_rectangle(grid_surface_context, (x - 0.15) * scale,
+                    (y - 0.15) * scale, 0.3 * scale, 0.3 * scale);
+  }
+
+  cairo_fill(grid_surface_context);
+
+  time_t seconds;
+  time(&seconds);
+  std::string filename = "grid_with_inserted_cloud" + std::to_string(seconds) + std::to_string(rendered_grid_id) + ".png";
+  rendered_grid_id++;
+}
+
+
+void renderGridwithScan(
+    const cartographer::mapping::TSDF2D& grid, const Sample& sample,
+    const cartographer::transform::Rigid2d initial_transform,
+    const cartographer::transform::Rigid2d matched_transform) {
+
+  sensor::RangeData initial_pose_estimate_range_data =
+      cartographer::sensor::TransformRangeData(
+          sample.range_data,
+          transform::Embed3D(initial_transform.cast<float>()));
+  sensor::RangeData
+      matched_range_data = cartographer::sensor::TransformRangeData( sample.range_data,
+                                                                     transform::Embed3D(matched_transform.cast<float>()));
+
+  const cartographer::mapping::MapLimits& limits = grid.limits();
+  double scale = 1. / limits.resolution();
+  cairo_surface_t* grid_surface;
+  cairo_t* grid_surface_context;
+
+  int scaled_num_x_cells = limits.cell_limits().num_x_cells * scale;
+  int scaled_num_y_cells = limits.cell_limits().num_y_cells * scale;
+  grid_surface = cairo_image_surface_create(
+      CAIRO_FORMAT_ARGB32, scaled_num_x_cells, scaled_num_y_cells);
+  grid_surface_context = cairo_create(grid_surface);
+  cairo_device_to_user_distance(grid_surface_context, &scale, &scale);
+  for (int ix = 0; ix < scaled_num_x_cells; ++ix) {
+    for (int iy = 0; iy < scaled_num_y_cells; ++iy) {
+      float p = std::abs(grid.GetTSDF({iy, ix}))/grid.GetMaxTSDF();
+      cairo_set_source_rgb(grid_surface_context, p, p, p);
+      cairo_rectangle(grid_surface_context, scale * (float(ix)),
+                      scale * ((float)iy), scale, scale);
+      cairo_fill(grid_surface_context);
+    }
+  }
+
+  cairo_set_source_rgb(grid_surface_context, 0.8, 0.0, 0);
+  for (auto& scan : initial_pose_estimate_range_data.returns) {
+    float x = scale * (limits.max().x() - scan[0]);
+    float y = scale * (limits.max().y() - scan[1]);
+    cairo_rectangle(grid_surface_context, (x - 0.15) * scale,
+                    (y - 0.15) * scale, 0.3 * scale, 0.3 * scale);
+  }
+  cairo_fill(grid_surface_context);
+
+  cairo_set_source_rgb(grid_surface_context, 0.0, 0.8, 0);
+  for (auto& scan : matched_range_data.returns) {
+    float x = scale * (limits.max().x() - scan[0]);
+    float y = scale * (limits.max().y() - scan[1]);
+    cairo_rectangle(grid_surface_context, (x - 0.15) * scale,
+                    (y - 0.15) * scale, 0.3 * scale, 0.3 * scale);
+  }
+
+  cairo_fill(grid_surface_context);
+
+  time_t seconds;
+  time(&seconds);
+  std::string filename = "grid_with_inserted_cloud" + std::to_string(seconds) + std::to_string(rendered_grid_id) + ".png";
+  rendered_grid_id++;
 }
 
 template <typename GridType, typename RangeDataInserter>
@@ -151,9 +273,9 @@ void MatchScan(const Sample& sample,
                      sample.range_data.returns, grid, &matched_pose_estimate,
                      &summary);
   const auto initial_error =
-      initial_pose_estimate * sample.ground_truth_pose.inverse();
+      initial_pose_estimate * sample.ground_truth_pose;
   const auto matching_error =
-      matched_pose_estimate * sample.ground_truth_pose.inverse();
+      matched_pose_estimate * sample.ground_truth_pose;
   sample_result->initial_trans_error = initial_error.translation().norm();
   sample_result->matching_trans_error = matching_error.translation().norm();
   sample_result->initial_rot_error = initial_error.rotation().smallestAngle();
@@ -165,6 +287,8 @@ void MatchScan(const Sample& sample,
             << sample_result->initial_trans_error << " \t"
             << sample_result->matching_iterations << " \t"
             << sample_result->matching_time;
+
+  renderGridwithScan(grid, sample, initial_pose_estimate, matched_pose_estimate);
 }
 
 void RunScanMatchingEvaluation() {
@@ -203,12 +327,12 @@ void RunScanMatchingEvaluation() {
       ceres_scan_matcher_options =
           cartographer::mapping::scan_matching::CreateCeresScanMatcherOptions2D(
               parameter_dictionary.get());
-  int n_training = 5;
+  int n_training = 25;
   int n_test = 5;
   double error_trans = 0.05;
   const ScanCloudGenerator::ModelType model_type =
       ScanCloudGenerator::ModelType::RECTANGLE;
-  const Eigen::Vector2d size = {0.6, 0.6};
+  const Eigen::Vector2d size = {0.5, 0.5};
   const double resolution = 0.05;
   std::vector<Sample> training_set;
   std::vector<Sample> test_set;
@@ -222,10 +346,10 @@ void RunScanMatchingEvaluation() {
       training_set, test_set, range_data_inserter_options,
       ceres_scan_matcher_options, probability_grid_results);
   LOG(INFO) << "Evaluating TSDF:";
-  EvaluateScanMatcher<cartographer::mapping::TSDF2D,
-                      cartographer::mapping::RangeDataInserter2DTSDF>(
-      training_set, test_set, range_data_inserter_options,
-      ceres_scan_matcher_options, probability_grid_results);
+   EvaluateScanMatcher<cartographer::mapping::TSDF2D,
+                       cartographer::mapping::RangeDataInserter2DTSDF>(
+       training_set, test_set, range_data_inserter_options,
+       ceres_scan_matcher_options, probability_grid_results);
 
   /*
   sensor::RangeData initial_pose_estimate_range_data =

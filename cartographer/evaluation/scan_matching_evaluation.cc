@@ -332,7 +332,7 @@ void RunScanMatchingEvaluation() {
           cartographer::mapping::scan_matching::CreateCeresScanMatcherOptions2D(
               parameter_dictionary.get());
   int n_training = 25;
-  int n_test = 5;
+  int n_test = 2;
 
   std::ofstream log_file;
   std::string log_file_path;
@@ -345,9 +345,9 @@ void RunScanMatchingEvaluation() {
               "matching_time\n";
 
 
-  std::vector<double> trans_errors = {0.0, 0.05, 0.1, 0.15};
+  //std::vector<double> trans_errors = {0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3};
+  std::vector<double> trans_errors = {0.025, 0.075, 0.125, 0.175, 0.225, 0.275};
   for(double error_trans: trans_errors) {
-    //double error_trans = 0.05;
     const ScanCloudGenerator::ModelType model_type =
         ScanCloudGenerator::ModelType::RECTANGLE;
     const Eigen::Vector2d size = {0.5, 0.5};
@@ -368,7 +368,7 @@ void RunScanMatchingEvaluation() {
                << res.initial_trans_error << "," << res.initial_rot_error << ","
                << res.matching_trans_error << "," << res.matching_rot_error
                << "," << res.matching_iterations << "," <<
-               res.matching_time << ",\n";
+               res.matching_time << "\n";
     }
     std::vector<SampleResult> tsdf_results;
     LOG(INFO) << "Evaluating TSDF:";
@@ -381,7 +381,7 @@ void RunScanMatchingEvaluation() {
                << "," << res.initial_rot_error << ","
                << res.matching_trans_error << "," << res.matching_rot_error
                << "," << res.matching_iterations << "," <<
-               res.matching_time << ",\n";
+               res.matching_time << "\n";
     }
   }
   log_file.close();

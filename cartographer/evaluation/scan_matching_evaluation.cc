@@ -200,8 +200,18 @@ void renderGridwithScan(
   cairo_device_to_user_distance(grid_surface_context, &scale, &scale);
   for (int ix = 0; ix < scaled_num_x_cells; ++ix) {
     for (int iy = 0; iy < scaled_num_y_cells; ++iy) {
-      float p = std::abs(grid.GetTSDF({iy, ix}))/grid.GetMaxTSDF();
-      cairo_set_source_rgb(grid_surface_context, p, p, p);
+      float r = 1.f;
+      float g = 1.f;
+      float b = 1.f;
+      float normalized_tsdf = grid.GetTSDF({iy, ix})/grid.GetMaxTSDF();
+      if(normalized_tsdf > 0.f ){
+        g = 1. - std::pow(std::abs(normalized_tsdf),0.5);
+        b = g;
+      } else {
+        r =  1.- std::pow(std::abs(normalized_tsdf), 0.5);
+        g = r;
+      }
+      cairo_set_source_rgb(grid_surface_context, r, g, b);
       cairo_rectangle(grid_surface_context, scale * (float(ix)),
                       scale * ((float)iy), scale, scale);
       cairo_fill(grid_surface_context);
@@ -332,7 +342,7 @@ void RunScanMatchingEvaluation() {
           cartographer::mapping::scan_matching::CreateCeresScanMatcherOptions2D(
               parameter_dictionary.get());
   int n_training = 25;
-  int n_test = 2;
+  int n_test = 5;
 
   std::ofstream log_file;
   std::string log_file_path;
@@ -346,7 +356,7 @@ void RunScanMatchingEvaluation() {
 
 
   //std::vector<double> trans_errors = {0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3};
-  std::vector<double> trans_errors = {0.025, 0.075, 0.125, 0.175, 0.225, 0.275};
+  std::vector<double> trans_errors = {0.025, 0.075, 0.125, 0.175, 0.225, 0.275,  0.325, 0.375,  0.425, 0.475, };
   for(double error_trans: trans_errors) {
     const ScanCloudGenerator::ModelType model_type =
         ScanCloudGenerator::ModelType::RECTANGLE;

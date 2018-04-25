@@ -96,7 +96,7 @@ bool TSDF2D::UpdateCell(const Eigen::Array2i& cell_index,
 }
 
 float TSDF2D::GetTSDF(const Eigen::Array2i& cell_index) const {
-  if (limits_.Contains(cell_index)) {
+  if (limits_.Contains(cell_index) && tsdf_cells_[ToFlatIndex(cell_index, limits_)] != 0) {
     return value_helper->ValueToTSDF(
         tsdf_cells_[ToFlatIndex(cell_index, limits_)]);
   }

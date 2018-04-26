@@ -69,28 +69,50 @@ void CeresScanMatcher2D::Match(const Eigen::Vector2d& target_translation,
                                    initial_pose_estimate.translation().y(),
                                    initial_pose_estimate.rotation().angle()};
   ceres::Problem problem;
+  setupProblem(target_translation, initial_pose_estimate, point_cloud, grid, &ceres_pose_estimate[0], &problem);
+  ceres::Solve(ceres_solver_options_, &problem, summary);
+  *pose_estimate = transform::Rigid2d(
+      {ceres_pose_estimate[0], ceres_pose_estimate[1]}, ceres_pose_estimate[2]);
+}
+
+
+
+void CeresScanMatcher2D::EvaluateGradient(const Eigen::Vector2d& target_translation,
+                      const transform::Rigid2d& initial_pose_estimate,
+                      const sensor::PointCloud& point_cloud, const Grid2D& grid,
+                      std::vector<double> &gradient) const {
+  double ceres_pose_estimate[3] = {initial_pose_estimate.translation().x(),
+                                   initial_pose_estimate.translation().y(),
+                                   initial_pose_estimate.rotation().angle()};
+  ceres::Problem problem;
+  setupProblem(target_translation, initial_pose_estimate, point_cloud, grid, &ceres_pose_estimate[0], &problem);
+  problem.Evaluate(ceres::Problem::EvaluateOptions(), NULL, NULL, &gradient, NULL);
+}
+
+
+void CeresScanMatcher2D::setupProblem(const Eigen::Vector2d& target_translation,
+                  const transform::Rigid2d& initial_pose_estimate,
+                  const sensor::PointCloud& point_cloud, const Grid2D& grid,
+                  double* ceres_pose_estimate,
+                  ceres::Problem* problem) const
+{
   CHECK_GT(options_.occupied_space_weight(), 0.);
-  problem.AddResidualBlock(
+  problem->AddResidualBlock(
       OccupiedSpaceCostFunction2D::CreateAutoDiffCostFunction(
           options_.occupied_space_weight() /
               std::sqrt(static_cast<double>(point_cloud.size())),
           point_cloud, grid),
       nullptr /* loss function */, ceres_pose_estimate);
   CHECK_GE(options_.translation_weight(), 0.);
-  problem.AddResidualBlock(
+  problem->AddResidualBlock(
       TranslationDeltaCostFunctor2D::CreateAutoDiffCostFunction(
           options_.translation_weight(), target_translation),
       nullptr /* loss function */, ceres_pose_estimate);
   CHECK_GE(options_.rotation_weight(), 0.);
-  problem.AddResidualBlock(
+  problem->AddResidualBlock(
       RotationDeltaCostFunctor2D::CreateAutoDiffCostFunction(
           options_.rotation_weight(), ceres_pose_estimate[2]),
       nullptr /* loss function */, ceres_pose_estimate);
-
-  ceres::Solve(ceres_solver_options_, &problem, summary);
-
-  *pose_estimate = transform::Rigid2d(
-      {ceres_pose_estimate[0], ceres_pose_estimate[1]}, ceres_pose_estimate[2]);
 }
 
 }  // namespace scan_matching

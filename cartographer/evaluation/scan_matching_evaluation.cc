@@ -20,6 +20,11 @@
 
 namespace cartographer {
 namespace evaluation {
+namespace {
+static int rendered_grid_id = 0;
+static std::random_device rd;
+static std::default_random_engine e1(42);
+}  // namespace
 
 struct Sample {
   cartographer::sensor::RangeData range_data;
@@ -34,8 +39,6 @@ struct SampleResult {
   double matching_time;
   int matching_iterations;
 };
-static std::random_device rd;
-static std::default_random_engine e1(42);
 
 void GenerateRangeData(const ScanCloudGenerator::ModelType model_type,
                        const Eigen::Vector2d size, const double resolution,
@@ -65,7 +68,7 @@ Sample GenerateSample(double error_trans,
   std::uniform_real_distribution<double> error_translation_direction(-M_PI,
                                                                      M_PI);
   double orientation = error_translation_direction(e1);
-  double scale = error_trans == 0.0 ? 0.0 : error_distribution_translation(e1);
+  double scale = error_trans == 0.0 ? 0.0 : error_trans;//error_distribution_translation(e1);
   double x = std::cos(orientation) * scale;
   double y = std::sin(orientation) * scale;
   Sample sample;
@@ -113,19 +116,18 @@ generateGrid<cartographer::mapping::TSDF2D>() {
   return std::move(grid);
 }
 
-static int rendered_grid_id = 0;
 void renderGridwithScan(
     const cartographer::mapping::ProbabilityGrid& grid, const Sample& sample,
-    const cartographer::transform::Rigid2d initial_transform,
-    const cartographer::transform::Rigid2d matched_transform) {
-
-    sensor::RangeData initial_pose_estimate_range_data =
-        cartographer::sensor::TransformRangeData(
-            sample.range_data,
-    transform::Embed3D(initial_transform.cast<float>()));
-    sensor::RangeData
-    matched_range_data = cartographer::sensor::TransformRangeData( sample.range_data,
-    transform::Embed3D(matched_transform.cast<float>()));
+    const cartographer::transform::Rigid2d& initial_transform,
+    const cartographer::transform::Rigid2d& matched_transform) {
+  sensor::RangeData initial_pose_estimate_range_data =
+      cartographer::sensor::TransformRangeData(
+          sample.range_data,
+          transform::Embed3D(initial_transform.cast<float>()));
+  sensor::RangeData matched_range_data =
+      cartographer::sensor::TransformRangeData(
+          sample.range_data,
+          transform::Embed3D(matched_transform.cast<float>()));
 
   const cartographer::mapping::MapLimits& limits = grid.limits();
   double scale = 1. / limits.resolution();
@@ -177,8 +179,8 @@ void renderGridwithScan(
 
 void renderGridwithScan(
     const cartographer::mapping::TSDF2D& grid, const Sample& sample,
-    const cartographer::transform::Rigid2d initial_transform,
-    const cartographer::transform::Rigid2d matched_transform) {
+    const cartographer::transform::Rigid2d& initial_transform,
+    const cartographer::transform::Rigid2d& matched_transform) {
   sensor::RangeData initial_pose_estimate_range_data =
       cartographer::sensor::TransformRangeData(
           sample.range_data,
@@ -302,7 +304,7 @@ void MatchScan(const Sample& sample,
             << sample_result->matching_iterations << " \t"
             << sample_result->matching_time;
 
-  renderGridwithScan(grid, sample, initial_pose_estimate, matched_pose_estimate);
+  //renderGridwithScan(grid, sample, initial_pose_estimate, matched_pose_estimate);
 }
 
 void RunScanMatchingEvaluation() {
@@ -342,7 +344,7 @@ void RunScanMatchingEvaluation() {
           cartographer::mapping::scan_matching::CreateCeresScanMatcherOptions2D(
               parameter_dictionary.get());
   int n_training = 25;
-  int n_test = 5;
+  int n_test = 10000;
 
   std::ofstream log_file;
   std::string log_file_path;
@@ -355,8 +357,7 @@ void RunScanMatchingEvaluation() {
               "matching_time\n";
 
 
-  //std::vector<double> trans_errors = {0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3};
-  std::vector<double> trans_errors = {0.025, 0.075, 0.125, 0.175, 0.225, 0.275,  0.325, 0.375,  0.425, 0.475, };
+  std::vector<double> trans_errors = {0.05, 0.1, 0.25, 0.5};
   for(double error_trans: trans_errors) {
     const ScanCloudGenerator::ModelType model_type =
         ScanCloudGenerator::ModelType::RECTANGLE;

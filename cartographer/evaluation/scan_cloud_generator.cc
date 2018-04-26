@@ -4,8 +4,9 @@
 
 namespace cartographer {
 namespace evaluation {
-
+namespace {
 static std::default_random_engine e1(42);
+}  // namespace
 
 ScanCloudGenerator::ScanCloudGenerator() : resolution_(0.025) {}
 

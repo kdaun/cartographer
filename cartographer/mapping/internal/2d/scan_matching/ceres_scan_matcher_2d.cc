@@ -75,20 +75,20 @@ void CeresScanMatcher2D::Match(const Eigen::Vector2d& target_translation,
       {ceres_pose_estimate[0], ceres_pose_estimate[1]}, ceres_pose_estimate[2]);
 }
 
-
-
-void CeresScanMatcher2D::EvaluateGradient(const Eigen::Vector2d& target_translation,
-                      const transform::Rigid2d& initial_pose_estimate,
-                      const sensor::PointCloud& point_cloud, const Grid2D& grid,
-                      std::vector<double> &gradient) const {
+void CeresScanMatcher2D::Evaluate(
+    const Eigen::Vector2d& target_translation,
+    const transform::Rigid2d& initial_pose_estimate,
+    const sensor::PointCloud& point_cloud, const Grid2D& grid, double* cost,
+    std::vector<double>* residuals, std::vector<double>* jacobians) const {
   double ceres_pose_estimate[3] = {initial_pose_estimate.translation().x(),
                                    initial_pose_estimate.translation().y(),
                                    initial_pose_estimate.rotation().angle()};
   ceres::Problem problem;
-  setupProblem(target_translation, initial_pose_estimate, point_cloud, grid, &ceres_pose_estimate[0], &problem);
-  problem.Evaluate(ceres::Problem::EvaluateOptions(), NULL, NULL, &gradient, NULL);
+  setupProblem(target_translation, initial_pose_estimate, point_cloud, grid,
+               &ceres_pose_estimate[0], &problem);
+  problem.Evaluate(ceres::Problem::EvaluateOptions(), cost, residuals,
+                   jacobians, NULL);
 }
-
 
 void CeresScanMatcher2D::setupProblem(const Eigen::Vector2d& target_translation,
                   const transform::Rigid2d& initial_pose_estimate,

@@ -38,7 +38,7 @@ class GridArrayAdapter {
   void GetValue(const int row, const int column, double* const value) const {
     if (row < kPadding || column < kPadding || row >= NumRows() - kPadding ||
         column >= NumCols() - kPadding) {
-      *value = grid_.GetMaxCorrespondenceCost();
+      *value = grid_.GetUnknownCorrespondenceCost();
     } else {
       *value = static_cast<double>(grid_.GetCorrespondenceCost(
           Eigen::Array2i(column - kPadding, row - kPadding)));
@@ -82,9 +82,9 @@ class OccupiedSpaceCostFunction2D {
     Eigen::Matrix<T, 3, 3> transform;
     transform << rotation_matrix, translation, T(0.), T(0.), T(1.);
 
-    const GridArrayAdapter adapter(probability_grid_);
+    const GridArrayAdapter adapter(grid);
     ceres::BiCubicInterpolator<GridArrayAdapter> interpolator(adapter);
-    const MapLimits& limits = probability_grid_.limits();
+    const MapLimits& limits = grid.limits();
 
     for (size_t i = 0; i < point_cloud_.size(); ++i) {
       // Note that this is a 2D point. The third component is a scaling factor.
@@ -107,10 +107,10 @@ class OccupiedSpaceCostFunction2D {
 
   OccupiedSpaceCostFunction2D(const double scaling_factor,
                               const sensor::PointCloud& point_cloud,
-                              const Grid2D& probability_grid)
+                              const Grid2D& grid)
       : scaling_factor_(scaling_factor),
         point_cloud_(point_cloud),
-        probability_grid_(probability_grid) {}
+        grid(grid) {}
 
   OccupiedSpaceCostFunction2D(const OccupiedSpaceCostFunction2D&) = delete;
   OccupiedSpaceCostFunction2D& operator=(const OccupiedSpaceCostFunction2D&) =
@@ -118,7 +118,7 @@ class OccupiedSpaceCostFunction2D {
 
   const double scaling_factor_;
   const sensor::PointCloud& point_cloud_;
-  const Grid2D& probability_grid_;
+  const Grid2D& grid;
 };
 
 }  // namespace scan_matching

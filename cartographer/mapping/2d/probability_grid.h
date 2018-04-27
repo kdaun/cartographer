@@ -58,6 +58,7 @@ class ProbabilityGrid : public Grid2D {
   float GetMinCorrespondenceCost() const override;
   float GetMinAbsCorrespondenceCost() const override;
   float GetMaxCorrespondenceCost() const override;
+  float GetUnknownCorrespondenceCost() const override ;
 
   bool IsKnown(const Eigen::Array2i& cell_index) const override;
 

@@ -96,7 +96,7 @@ bool TSDF2D::UpdateCell(const Eigen::Array2i& cell_index,
 }
 
 float TSDF2D::GetTSDF(const Eigen::Array2i& cell_index) const {
-  if (limits_.Contains(cell_index) && tsdf_cells_[ToFlatIndex(cell_index, limits_)] != 0) {
+  if (limits_.Contains(cell_index)) {
     return value_helper->ValueToTSDF(
         tsdf_cells_[ToFlatIndex(cell_index, limits_)]);
   }
@@ -109,6 +109,11 @@ float TSDF2D::GetWeight(const Eigen::Array2i& cell_index) const {
         weight_cells_[ToFlatIndex(cell_index, limits_)]);
   }
   return value_helper->getMinWeight();
+}
+
+
+float TSDF2D::GetUnknownCorrespondenceCost() const {
+  return GetMinTSDF();
 }
 
 float TSDF2D::GetCorrespondenceCost(const Eigen::Array2i& cell_index) const {

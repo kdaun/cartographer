@@ -48,6 +48,8 @@ class Grid2D {
   virtual float GetMinAbsCorrespondenceCost() const = 0;
   // Returns the largest possible correspondence value.
   virtual float GetMaxCorrespondenceCost() const = 0;
+  // Returns correspondence cost value for unknown cells.
+  virtual float GetUnknownCorrespondenceCost() const = 0;
 
   // Returns true if the probability at the specified index is known.
   virtual bool IsKnown(const Eigen::Array2i& cell_index) const = 0;

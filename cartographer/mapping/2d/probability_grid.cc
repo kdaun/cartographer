@@ -110,6 +110,9 @@ float ProbabilityGrid::GetMaxCorrespondenceCost() const {
   return 1. - kMinProbability;
 }
 
+float ProbabilityGrid::GetUnknownCorrespondenceCost() const {
+  return GetMaxCorrespondenceCost();
+}
 // Returns true if the probability at the specified index is known.
 bool ProbabilityGrid::IsKnown(const Eigen::Array2i& cell_index) const {
   return limits_.Contains(cell_index) &&

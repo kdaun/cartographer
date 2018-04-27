@@ -32,7 +32,7 @@ float TSDFValueHelper::SlowValueToTSDF(const uint16 value) const {
   CHECK_LE(value, 32767);
   if (value == kUnknownTSDFValue) {
     // Unknown cells have kMinProbability.
-    return kMaxTSDF;
+    return kMinTSDF;
   }
   const float kScale = (kMaxTSDF - kMinTSDF) / 32766.f;
   return value * kScale + (kMinTSDF - kScale);

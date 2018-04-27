@@ -56,6 +56,7 @@ class TSDF2D : public Grid2D {
   float GetMinTSDF() const;
   float GetMaxWeight() const;
   float GetMinWeight() const;
+  float GetUnknownCorrespondenceCost() const override ;
 
   bool IsKnown(const Eigen::Array2i& cell_index) const override;
 

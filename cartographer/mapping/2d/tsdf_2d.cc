@@ -88,9 +88,14 @@ bool TSDF2D::UpdateCell(const Eigen::Array2i& cell_index,
   if (*tsdf_cell < value_helper->getUpdateMarker()) {
     update_indices_.push_back(flat_index);
     known_cells_box_.extend(cell_index.matrix());
-    *tsdf_cell =
-        value_helper->TSDFToValue(updated_sdf) + value_helper->getUpdateMarker();
+    *tsdf_cell = value_helper->TSDFToValue(updated_sdf) +
+                 value_helper->getUpdateMarker();
     *weight_cell = value_helper->WeightToValue(updated_weight);
+  } else {
+    /**tsdf_cell =
+        value_helper->TSDFToValue(updated_sdf) +
+    value_helper->getUpdateMarker(); *weight_cell =
+    value_helper->WeightToValue(updated_weight);*/
   }
   return true;
 }

@@ -9,10 +9,12 @@ class ScanCloudGenerator {
  public:
   ScanCloudGenerator();
   ScanCloudGenerator(float resolution);
-  void generateSquare(cartographer::sensor::PointCloud& cloud, float size);
+  void generateSquare(cartographer::sensor::PointCloud& cloud, float size,
+                      float noise_std_dev);
   void generateRectangle(cartographer::sensor::PointCloud& cloud, float size_x,
-                         float size_y);
-  void generateCircle(cartographer::sensor::PointCloud& cloud, float radius);
+                         float size_y, float noise_std_dev);
+  void generateCircle(cartographer::sensor::PointCloud& cloud, float radius,
+                      float noise_std_dev);
 
   enum class ModelType { SQUARE, RECTANGLE, CIRCLE };
 

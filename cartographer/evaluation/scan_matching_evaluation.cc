@@ -42,16 +42,18 @@ struct SampleResult {
 
 void GenerateRangeData(const ScanCloudGenerator::ModelType model_type,
                        const Eigen::Vector2d size, const double resolution,
-                       cartographer::sensor::RangeData& range_data) {
+                       cartographer::sensor::RangeData& range_data,
+                       float noise_std_dev) {
   cartographer::sensor::PointCloud scan_cloud;
   ScanCloudGenerator test_set_generator(resolution);
   switch (model_type) {
     case ScanCloudGenerator::ModelType::CIRCLE:
-      test_set_generator.generateCircle(scan_cloud, size[0]);
+      test_set_generator.generateCircle(scan_cloud, size[0], noise_std_dev);
     case ScanCloudGenerator::ModelType::SQUARE:
-      test_set_generator.generateSquare(scan_cloud, size[0]);
+      test_set_generator.generateSquare(scan_cloud, size[0], noise_std_dev);
     case ScanCloudGenerator::ModelType::RECTANGLE:
-      test_set_generator.generateRectangle(scan_cloud, size[0], size[1]);
+      test_set_generator.generateRectangle(scan_cloud, size[0], size[1],
+                                           noise_std_dev);
       range_data.returns = scan_cloud;
       range_data.origin = Eigen::Vector3f{0, 0, 0};
   }
@@ -59,9 +61,11 @@ void GenerateRangeData(const ScanCloudGenerator::ModelType model_type,
 
 Sample GenerateSample(double error_trans, double error_rot,
                       const ScanCloudGenerator::ModelType model_type,
-                      const Eigen::Vector2d size, const double resolution) {
+                      const Eigen::Vector2d size, const double resolution,
+                      float cloud_noise_std_dev) {
   cartographer::sensor::RangeData range_data;
-  GenerateRangeData(model_type, size, resolution, range_data);
+  GenerateRangeData(model_type, size, resolution, range_data,
+                    cloud_noise_std_dev);
 
   std::uniform_real_distribution<double> error_translation_direction(-M_PI,
                                                                      M_PI);
@@ -84,15 +88,16 @@ void GenerateSampleSet(int n_training, int n_test, double error_trans,
                        double error_rot,
                        const ScanCloudGenerator::ModelType model_type,
                        const Eigen::Vector2d size, const double resolution,
+                       const float cloud_noise_std_dev,
                        std::vector<Sample>& training_set,
                        std::vector<Sample>& test_set) {
   for (int i = 0; i < n_training; ++i) {
-    training_set.push_back(
-        GenerateSample(0.0, 0.0, model_type, size, resolution));
+    training_set.push_back(GenerateSample(0.0, 0.0, model_type, size,
+                                          resolution, cloud_noise_std_dev));
   }
   for (int i = 0; i < n_test; ++i) {
-    test_set.push_back(
-        GenerateSample(error_trans, error_rot, model_type, size, resolution));
+    test_set.push_back(GenerateSample(error_trans, error_rot, model_type, size,
+                                      resolution, cloud_noise_std_dev));
   }
 }
 template <typename GridType>
@@ -304,8 +309,8 @@ void MatchScan(const Sample& sample,
             << sample_result->matching_iterations << " \t"
             << sample_result->matching_time;
 
-  renderGridwithScan(grid, sample, initial_pose_estimate,
-                     matched_pose_estimate);
+   renderGridwithScan(grid, sample, initial_pose_estimate,
+                    matched_pose_estimate);
 }
 
 template <typename GridType, typename RangeDataInserter>
@@ -393,7 +398,7 @@ void RunScanMatchingEvaluation() {
           cartographer::mapping::scan_matching::CreateCeresScanMatcherOptions2D(
               parameter_dictionary.get());
   int n_training = 25;
-  int n_test = 10000;
+  int n_test = 1000;
 
   std::ofstream log_file;
   std::string log_file_path;
@@ -416,10 +421,11 @@ void RunScanMatchingEvaluation() {
           ScanCloudGenerator::ModelType::RECTANGLE;
       const Eigen::Vector2d size = {0.5, 0.5};
       const double resolution = 0.05;
+      const float cloud_noise = 0.01;
       std::vector<Sample> training_set;
       std::vector<Sample> test_set;
       GenerateSampleSet(n_training, n_test, error_trans, error_rot, model_type,
-                        size, resolution, training_set, test_set);
+                        size, resolution, cloud_noise, training_set, test_set);
       std::vector<SampleResult> probability_grid_results;
       LOG(INFO) << "Evaluating probability grid:";
       EvaluateScanMatcher<
@@ -452,7 +458,7 @@ void RunScanMatchingEvaluation() {
   log_file.close();
 }
 
-void EvaluateGradients() {
+void RunEvaluateGradients() {
   cartographer::mapping::proto::RangeDataInserterOptions2D
       range_data_inserter_options;
   auto parameter_dictionary_range_data_inserter = common::MakeDictionary(
@@ -499,10 +505,11 @@ void EvaluateGradients() {
           ScanCloudGenerator::ModelType::RECTANGLE;
       const Eigen::Vector2d size = {1.0, 1.0};
       const double resolution = 0.05;
+      const float cloud_noise = 0.01;
       std::vector<Sample> training_set;
       std::vector<Sample> test_set;
       GenerateSampleSet(n_training, n_test, error_trans, error_rot, model_type,
-                        size, resolution, training_set, test_set);
+                        size, resolution, cloud_noise, training_set, test_set);
       std::vector<std::vector<double>> gradients;
       LOG(INFO) << "Evaluating probability grid:";
       EvaluateScanMatcherGradient<
@@ -586,6 +593,117 @@ void EvaluateGradients() {
   }
 }
 
+void RunEvaluateNoiseLevels() {
+  cartographer::mapping::proto::RangeDataInserterOptions2D
+      range_data_inserter_options;
+  auto parameter_dictionary_range_data_inserter = common::MakeDictionary(
+      "return { "
+      "probability_grid = {"
+      "insert_free_space = true, "
+      "hit_probability = 0.7, "
+      "miss_probability = 0.4, "
+      "},"
+      "tsdf = {"
+      "range_data_inserter_type = \"CONSTANT_WEIGHT\","
+      "truncation_distance = 0.3,"
+      "behind_surface_distance = 0.3,"
+      "update_weight = 0.01,"
+      "maximum_weight = 1000.,"
+      "},"
+      "}");
+  range_data_inserter_options =
+      cartographer::mapping::CreateRangeDataInserterOptions2D(
+          parameter_dictionary_range_data_inserter.get());
+  auto parameter_dictionary = common::MakeDictionary(R"text(
+        return {
+          occupied_space_weight = 1.,
+          translation_weight = 0.0,
+          rotation_weight = 0.0,
+          ceres_solver_options = {
+            use_nonmonotonic_steps = true,
+            max_num_iterations = 50,
+            num_threads = 1,
+          },
+        })text");
+  const cartographer::mapping::scan_matching::proto::CeresScanMatcherOptions2D
+      ceres_scan_matcher_options =
+          cartographer::mapping::scan_matching::CreateCeresScanMatcherOptions2D(
+              parameter_dictionary.get());
+  int n_training = 50;
+  int n_test = 3;
+
+  std::ofstream log_file;
+  std::string log_file_path;
+  time_t seconds;
+  time(&seconds);
+  log_file_path =
+      "scan_matching_noise_evaluation_" + std::to_string(seconds) + ".csv";
+  log_file.open(log_file_path);
+  log_file << "grid_type,grid_resolution,initial_error_trans,initial_error_"
+              "angle,matched_error_trans,matched_error_angle,solver_iterations,"
+              "matching_time,sensor_noise\n";
+
+  // std::vector<double> noise_std_vars = {0.0, 0.01, 0.025, 0.05, 0.1, 0.25,
+  // 0.5};
+  std::vector<double> noise_std_vars = {0.0, 0.01, 0.025, 0.05, 0.1, 0.25};
+  // std::vector<double> trans_errors = {0.05, 0.1, 0.25, 0.5};
+  std::vector<double> trans_errors = {0.0};
+  /*std::vector<double> rot_errors = {0.2 * M_PI_4, 0.4 * M_PI_4, 0.6 * M_PI_4,
+                                    0.8 * M_PI_4};*/
+  std::vector<double> rot_errors = {0};
+
+  for (double noise_std_var : noise_std_vars) {
+    for (double error_trans : trans_errors) {
+      for (double error_rot : rot_errors) {
+        for (int i_test = 0; i_test < n_test; ++i_test) {
+          const ScanCloudGenerator::ModelType model_type =
+              ScanCloudGenerator::ModelType::RECTANGLE;
+          const Eigen::Vector2d size = {1.0, 1.0};
+          const double resolution = 0.025;
+          const float cloud_noise = noise_std_var;
+          std::vector<Sample> training_set;
+          std::vector<Sample> test_set;
+          GenerateSampleSet(n_training, 1, error_trans, error_rot, model_type,
+                            size, resolution, cloud_noise, training_set,
+                            test_set);
+          std::vector<SampleResult> probability_grid_results;
+          LOG(INFO) << "Evaluating probability grid:";
+          EvaluateScanMatcher<
+              cartographer::mapping::ProbabilityGrid,
+              cartographer::mapping::RangeDataInserter2DProbabilityGrid>(
+              training_set, test_set, range_data_inserter_options,
+              ceres_scan_matcher_options, &probability_grid_results);
+          for (const auto& res : probability_grid_results) {
+            log_file << "PROBABILITY_GRID"
+                     << "," << resolution << "," << res.initial_trans_error
+                     << "," << res.initial_rot_error << ","
+                     << res.matching_trans_error << ","
+                     << res.matching_rot_error << "," << res.matching_iterations
+                     << "," << res.matching_time << "," << noise_std_var
+                     << "\n";
+          }
+          std::vector<SampleResult> tsdf_results;
+          LOG(INFO) << "Evaluating TSDF:";
+          EvaluateScanMatcher<cartographer::mapping::TSDF2D,
+                              cartographer::mapping::RangeDataInserter2DTSDF>(
+              training_set, test_set, range_data_inserter_options,
+              ceres_scan_matcher_options, &tsdf_results);
+          for (const auto& res : tsdf_results) {
+            log_file << "TSDF"
+                     << "," << resolution << "," << res.initial_trans_error
+                     << "," << res.initial_rot_error << ","
+                     << res.matching_trans_error << ","
+                     << res.matching_rot_error << "," << res.matching_iterations
+                     << "," << res.matching_time << "," << noise_std_var
+                     << "\n";
+          }
+        }
+      }
+    }
+  }
+  log_file.close();
+}
+
 }  // namespace evaluation
 }  // namespace cartographer
 
@@ -593,6 +711,7 @@ int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
   FLAGS_logtostderr = true;
   google::ParseCommandLineFlags(&argc, &argv, true);
-  //cartographer::evaluation::RunScanMatchingEvaluation();
-  cartographer::evaluation::EvaluateGradients();
+  // cartographer::evaluation::RunScanMatchingEvaluation();
+  // cartographer::evaluation::RunEvaluateGradients();
+  cartographer::evaluation::RunEvaluateNoiseLevels();
 }

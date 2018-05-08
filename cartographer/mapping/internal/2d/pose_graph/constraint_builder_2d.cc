@@ -16,12 +16,15 @@
 
 #include "cartographer/mapping/internal/2d/pose_graph/constraint_builder_2d.h"
 
+#include <cartographer/mapping/map_builder.h>
 #include <cmath>
+#include <fstream>
 #include <functional>
 #include <iomanip>
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <random>
 #include <sstream>
 #include <string>
 
@@ -40,6 +43,10 @@
 namespace cartographer {
 namespace mapping {
 namespace pose_graph {
+namespace {
+static std::random_device rd;
+static std::default_random_engine e1(42);
+}  // namespace
 
 static auto* kConstraintsSearchedMetric = metrics::Counter::Null();
 static auto* kConstraintsFoundMetric = metrics::Counter::Null();
@@ -85,7 +92,7 @@ void ConstraintBuilder2D::MaybeAddConstraint(
     ++pending_computations_[current_computation_];
     const int current_computation = current_computation_;
     ScheduleSubmapScanMatcherConstructionAndQueueWorkItem(
-        submap_id, &submap->grid(), [=]() EXCLUDES(mutex_) {
+        submap_id, &submap->probability_grid(), [=]() EXCLUDES(mutex_) {
           ComputeConstraint(submap_id, submap, node_id,
                             false, /* match_full_submap */
                             constant_data, initial_relative_pose, constraint);
@@ -104,7 +111,7 @@ void ConstraintBuilder2D::MaybeAddGlobalConstraint(
   ++pending_computations_[current_computation_];
   const int current_computation = current_computation_;
   ScheduleSubmapScanMatcherConstructionAndQueueWorkItem(
-      submap_id, &submap->grid(), [=]() EXCLUDES(mutex_) {
+      submap_id, &submap->probability_grid(), [=]() EXCLUDES(mutex_) {
         ComputeConstraint(
             submap_id, submap, node_id, true, /* match_full_submap */
             constant_data, transform::Rigid2d::Identity(), constraint);
@@ -227,8 +234,281 @@ void ConstraintBuilder2D::ComputeConstraint(
   ceres::Solver::Summary unused_summary;
   ceres_scan_matcher_.Match(pose_estimate.translation(), pose_estimate,
                             constant_data->filtered_gravity_aligned_point_cloud,
-                            *submap_scan_matcher->grid,
-                            &pose_estimate, &unused_summary);
+                            *submap_scan_matcher->grid, &pose_estimate,
+                            &unused_summary);
+  for (const auto& evaluation_constraint :
+       cartographer::mapping::evaluation_constraints) {
+    // todo(kdaun) add evaluation related stuff
+    if (evaluation_constraint.submap_id == submap_id &&
+        evaluation_constraint.node_id == node_id) {
+      LOG(INFO) << "evaluating constraint...";
+      // map cost
+      float min_trans = -0.02;
+      float max_trans = 0.02;
+      float resolution_trans = 0.0001;
+      float min_rot = 0.f;
+      float max_rot = 2.f * M_PI;
+      float resolution_rot = 0.1;
+      std::ofstream log_file;
+      std::string log_file_path;
+      time_t seconds;
+      time(&seconds);
+      log_file_path = "gradient_pg_" + std::to_string(submap_id.submap_index) +
+                      std::to_string(node_id.node_index) +
+                      std::to_string(seconds) + ".csv";
+      log_file.open(log_file_path);
+
+      LOG(INFO) << "writing " << log_file_path;
+      for (float x = min_trans; x < max_trans; x += resolution_trans) {
+        for (float y = min_trans; y < max_trans; y += resolution_trans) {
+          const Eigen::Vector2d target_translation = {0., 0.};
+          ceres::Solver::Summary summary;
+          double cost;
+          std::vector<double> jacobians;
+          std::vector<Eigen::Vector3f> sample_cloud = {{x, y, 0.f}};
+
+          transform::Rigid2d pose_estimate_sample =
+          transform::Rigid2d({(double)x, double(y)}, 0.0) * pose_estimate ;
+          ceres_scan_matcher_.Evaluate(
+              pose_estimate_sample.translation(), pose_estimate_sample,
+              constant_data->filtered_gravity_aligned_point_cloud,
+              submap->probability_grid(), &cost, NULL, &jacobians);
+          double theta = 0.;
+          std::vector<double> result = {x, y, theta, cost};
+          result.insert(result.end(), jacobians.begin(), jacobians.end());
+
+          for (auto& element : result) {
+            log_file << element << ",";
+          }
+          log_file << "\n";
+        }
+      }
+      log_file.close();
+
+      // WHOLE CLOUD TSDF
+      log_file_path =
+          "gradient_tsdf_" + std::to_string(submap_id.submap_index) +
+          std::to_string(node_id.node_index) + std::to_string(seconds) + ".csv";
+      log_file.open(log_file_path);
+      LOG(INFO) << "writing " << log_file_path;
+
+      for (float x = min_trans; x < max_trans; x += resolution_trans) {
+        for (float y = min_trans; y < max_trans; y += resolution_trans) {
+          const Eigen::Vector2d target_translation = {0., 0.};
+          ceres::Solver::Summary summary;
+          double cost;
+          std::vector<double> jacobians;
+
+          transform::Rigid2d pose_estimate_sample =
+              transform::Rigid2d({(double)x, double(y)}, 0.0) * pose_estimate;
+          ceres_scan_matcher_.Evaluate(
+              pose_estimate_sample.translation(), pose_estimate_sample,
+              constant_data->filtered_gravity_aligned_point_cloud,
+              submap->tsdf(), &cost, NULL, &jacobians);
+          double theta = 0.;
+          std::vector<double> result = {x, y, theta, cost};
+          result.insert(result.end(), jacobians.begin(), jacobians.end());
+
+          for (auto& element : result) {
+            log_file << element << ",";
+          }
+          log_file << "\n";
+        }
+      }
+      log_file.close();
+
+      min_trans = -20.0;
+      max_trans = 20.0;
+      resolution_trans = 0.05;
+
+      // SINGLE POINT TSDF
+      log_file_path = "single_point_gradient_tsdf_" +
+                      std::to_string(submap_id.submap_index) +
+                      std::to_string(node_id.node_index) +
+                      std::to_string(seconds) + ".csv";
+      log_file.open(log_file_path);
+      LOG(INFO) << "writing " << log_file_path;
+      for (float x = min_trans; x < max_trans; x += resolution_trans) {
+        for (float y = min_trans; y < max_trans; y += resolution_trans) {
+          const Eigen::Vector2d target_translation = {0., 0.};
+          ceres::Solver::Summary summary;
+          double cost;
+          std::vector<double> jacobians;
+          std::vector<Eigen::Vector3f> sample_cloud = {{x, y, 0.f}};
+
+          transform::Rigid2d pose_estimate_sample =
+              pose_estimate * transform::Rigid2d({(double)x, double(y)}, 0.0);
+          ceres_scan_matcher_.Evaluate(pose_estimate_sample.translation(),
+                                       pose_estimate_sample, {{0.0, 0.0, 0.0}},
+                                       submap->tsdf(), &cost, NULL, &jacobians);
+          double theta = 0.;
+          std::vector<double> result = {x, y, theta, cost};
+          result.insert(result.end(), jacobians.begin(), jacobians.end());
+
+          for (auto& element : result) {
+            log_file << element << ",";
+          }
+          log_file << "\n";
+        }
+      }
+      log_file.close();
+
+      // SINGLE POINT PG
+      log_file_path =
+          "single_point_gradient_pg_" + std::to_string(submap_id.submap_index) +
+          std::to_string(node_id.node_index) + std::to_string(seconds) + ".csv";
+      log_file.open(log_file_path);
+      LOG(INFO) << "writing " << log_file_path;
+      for (float x = min_trans; x < max_trans; x += resolution_trans) {
+        for (float y = min_trans; y < max_trans; y += resolution_trans) {
+          const Eigen::Vector2d target_translation = {0., 0.};
+          ceres::Solver::Summary summary;
+          double cost;
+          std::vector<double> jacobians;
+          std::vector<Eigen::Vector3f> sample_cloud = {{x, y, 0.f}};
+
+          transform::Rigid2d pose_estimate_sample =
+              pose_estimate * transform::Rigid2d({(double)x, double(y)}, 0.0);
+          ceres_scan_matcher_.Evaluate(pose_estimate_sample.translation(),
+                                       pose_estimate_sample, {{0.0, 0.0, 0.0}},
+                                       submap->probability_grid(), &cost, NULL,
+                                       &jacobians);
+          double theta = 0.;
+          std::vector<double> result = {x, y, theta, cost};
+          result.insert(result.end(), jacobians.begin(), jacobians.end());
+
+          for (auto& element : result) {
+            log_file << element << ",";
+          }
+          log_file << "\n";
+        }
+      }
+      log_file.close();
+
+      // DISPLACEMENT
+      log_file_path = "displacement_" + std::to_string(submap_id.submap_index) +
+                      std::to_string(node_id.node_index) +
+                      std::to_string(seconds) + ".csv";
+      log_file.open(log_file_path);
+      LOG(INFO) << "writing " << log_file_path;
+
+      log_file << "grid_type,grid_resolution,initial_error_trans,initial_error_"
+                  "angle,matched_error_trans,matched_error_x,matched_error_y,"
+                  "matched_error_angle,solver_iterations,"
+                  "matching_time\n";
+
+      // std::vector<double> trans_errors = {0.05, 0.1, 0.25, 0.5};
+      std::vector<double> trans_errors = {0.05, 0.1};
+      // std::vector<double> rot_errors = {0.2 * M_PI_4, 0.4 * M_PI_4,
+      //                                  0.6 * M_PI_4, 0.8 * M_PI_4};
+      std::vector<double> rot_errors = {0.0};
+      int n_samples = 100;
+
+      ceres_scan_matcher_.options_.set_translation_weight(0.0);
+      ceres_scan_matcher_.options_.set_rotation_weight(0.0);
+
+      for (double error_trans : trans_errors) {
+        for (double error_rot : rot_errors) {
+          for (int i_sample = 0; i_sample < n_samples; ++i_sample) {
+            std::uniform_real_distribution<double> error_translation_direction(
+                -M_PI, M_PI);
+            double e_scale = error_trans == 0.0 ? 0.0 : error_trans;
+            double e_orientation = error_translation_direction(e1);
+            double e_x = std::cos(e_orientation) * e_scale;
+            double e_y = std::sin(e_orientation) * e_scale;
+            double e_rotation_direction = error_translation_direction(e1);
+            double e_theta = e_rotation_direction > 0 ? error_rot : -error_rot;
+            const cartographer::transform::Rigid2d initial_displacement =
+                cartographer::transform::Rigid2d({e_x, e_y}, e_theta);
+            ceres::Solver::Summary summary;
+
+            transform::Rigid2d displaced_pose_estimate =
+                initial_displacement * pose_estimate;
+            transform::Rigid2d matched_displaced_pose_estimate;
+            ceres_scan_matcher_.Match(
+                displaced_pose_estimate.translation(), displaced_pose_estimate,
+                constant_data->filtered_gravity_aligned_point_cloud,
+                submap->probability_grid(), &matched_displaced_pose_estimate,
+                &summary);
+            double initial_trans_error =
+                initial_displacement.translation().norm();
+            double matching_trans_error =
+                (pose_estimate.inverse() * matched_displaced_pose_estimate)
+                    .translation()
+                    .norm();
+            double initial_error_angle =
+                initial_displacement.rotation().smallestAngle();
+            double matched_error_angle =
+                (pose_estimate.inverse() * matched_displaced_pose_estimate)
+                    .rotation()
+                    .smallestAngle();
+            double solver_iterations =
+                summary.num_successful_steps + summary.num_unsuccessful_steps;
+            double matching_time = summary.minimizer_time_in_seconds;
+            log_file
+                << "PROBABILITY_GRID,0.05," << initial_trans_error << ","
+                << initial_error_angle << "," << matching_trans_error << ","
+                << (pose_estimate.inverse() * matched_displaced_pose_estimate)
+                       .translation()[0]
+                << ","
+                << (pose_estimate.inverse() * matched_displaced_pose_estimate)
+                       .translation()[1]
+                << "," << matched_error_angle << "," << solver_iterations << ","
+                << matching_time << "\n";
+
+            displaced_pose_estimate = initial_displacement * pose_estimate;
+
+            double default_occupied_space_weight =
+                ceres_scan_matcher_.options_.occupied_space_weight();
+            ceres_scan_matcher_.ceres_solver_options_.max_num_iterations = 200;
+            ceres_scan_matcher_.ceres_solver_options_.function_tolerance = 1e-9;
+            // LOG(INFO)<<"default_occupied_space_weight
+            // "<<default_occupied_space_weight;
+            ceres_scan_matcher_.options_.set_occupied_space_weight(60.);
+            ceres_scan_matcher_.Match(
+                displaced_pose_estimate.translation(), displaced_pose_estimate,
+                constant_data->filtered_gravity_aligned_point_cloud,
+                submap->tsdf(), &matched_displaced_pose_estimate, &summary);
+            ceres_scan_matcher_.ceres_solver_options_.function_tolerance = 1e-6;
+            ceres_scan_matcher_.ceres_solver_options_.max_num_iterations = 10;
+            ceres_scan_matcher_.options_.set_occupied_space_weight(
+                default_occupied_space_weight);
+            initial_trans_error = initial_displacement.translation().norm();
+            matching_trans_error =
+                (pose_estimate.inverse() * matched_displaced_pose_estimate)
+                    .translation()
+                    .norm();
+            initial_error_angle =
+                initial_displacement.rotation().smallestAngle();
+            matched_error_angle =
+                (pose_estimate.inverse() * matched_displaced_pose_estimate)
+                    .rotation()
+                    .smallestAngle();
+            solver_iterations =
+                summary.num_successful_steps + summary.num_unsuccessful_steps;
+            matching_time = summary.minimizer_time_in_seconds;
+            if (summary.termination_type != 1) {
+              LOG(INFO) << "TERMINATION TYPE: " << summary.termination_type
+                        << " " << summary.message;
+            }
+            // LOG(INFO)<<summary.FullReport();
+            log_file << "TSDF,0.05," << initial_trans_error << ","
+                     << initial_error_angle << "," << matching_trans_error << ","
+                     << (pose_estimate.inverse() *
+                         matched_displaced_pose_estimate)
+                            .translation()[0]
+                     << ","
+                     << (pose_estimate.inverse() *
+                         matched_displaced_pose_estimate)
+                            .translation()[1]
+                     << "," << matched_error_angle << "," << solver_iterations
+                     << "," << matching_time << "\n";
+          }
+        }
+      }
+      log_file.close();
+    }
+  }
 
   const transform::Rigid2d constraint_transform =
       ComputeSubmapPose(*submap).inverse() * pose_estimate;

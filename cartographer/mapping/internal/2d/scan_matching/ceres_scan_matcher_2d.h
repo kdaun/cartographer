@@ -58,12 +58,12 @@ class CeresScanMatcher2D {
                 double* cost, std::vector<double>* residuals,
                 std::vector<double>* jacobians) const;
 
- private:
+ public:
   void setupProblem(const Eigen::Vector2d& target_translation,
                     const transform::Rigid2d& initial_pose_estimate,
                     const sensor::PointCloud& point_cloud, const Grid2D& grid,
                     double* ceres_pose_estimate, ceres::Problem* problem) const;
-  const proto::CeresScanMatcherOptions2D options_;
+  proto::CeresScanMatcherOptions2D options_;
   ceres::Solver::Options ceres_solver_options_;
 };
 

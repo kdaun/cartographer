@@ -24,11 +24,14 @@
 
 #include "cartographer/common/thread_pool.h"
 #include "cartographer/mapping/pose_graph.h"
+#include "cartographer/mapping/pose_graph_interface.h"
 #include "cartographer/mapping/proto/map_builder_options.pb.h"
 #include "cartographer/sensor/collator_interface.h"
 
 namespace cartographer {
 namespace mapping {
+
+extern std::vector<PoseGraphInterface::Constraint> evaluation_constraints;
 
 proto::MapBuilderOptions CreateMapBuilderOptions(
     common::LuaParameterDictionary* const parameter_dictionary);

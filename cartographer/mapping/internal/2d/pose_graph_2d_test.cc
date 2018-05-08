@@ -13,8 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#include "cartographer/mapping/internal/2d/pose_graph_2d.h"
+/**#include "cartographer/mapping/internal/2d/pose_graph_2d.h"
 
 #include <cmath>
 #include <memory>
@@ -300,3 +299,4 @@ TEST_F(PoseGraph2DTest, OverlappingNodes) {
 }  // namespace
 }  // namespace mapping
 }  // namespace cartographer
+**/

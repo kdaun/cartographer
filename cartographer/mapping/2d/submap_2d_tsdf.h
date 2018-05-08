@@ -52,7 +52,11 @@ class Submap2DTSDF : public Submap2D {
   void ToResponseProto(const transform::Rigid3d& global_submap_pose,
                        proto::SubmapQuery::Response* response) const override;
 
-  const TSDF2D& grid() const override { return tsdf_; }
+  const TSDF2D& probability_grid() const override {
+    LOG(FATAL) << "not supported";
+    return tsdf_;
+  }
+  const TSDF2D& tsdf() const override { return tsdf_; }
 
   // Insert 'range_data' into this submap using 'range_data_inserter'. The
   // submap must not be finished yet.

@@ -38,6 +38,9 @@ ceres::Solver::Options CreateCeresSolverOptions(
   options.use_nonmonotonic_steps = proto.use_nonmonotonic_steps();
   options.max_num_iterations = proto.max_num_iterations();
   options.num_threads = proto.num_threads();
+  // options.function_tolerance = 1e-7;
+  // options.gradient_tolerance = 1e-11;
+  /*options.parameter_tolerance = 1e-10;*/
   return options;
 }
 

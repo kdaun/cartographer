@@ -41,6 +41,8 @@
 namespace cartographer {
 namespace mapping {
 
+std::vector<PoseGraphInterface::Constraint> evaluation_constraints;
+
 proto::MapBuilderOptions CreateMapBuilderOptions(
     common::LuaParameterDictionary* const parameter_dictionary) {
   proto::MapBuilderOptions options;

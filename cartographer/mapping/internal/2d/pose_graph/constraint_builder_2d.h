@@ -41,6 +41,7 @@
 
 namespace cartographer {
 namespace mapping {
+extern std::vector<PoseGraphInterface::Constraint> evaluation_constraints;
 namespace pose_graph {
 
 // Returns (map <- submap) where 'submap' is a coordinate system at the origin

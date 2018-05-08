@@ -26,7 +26,9 @@
 #include "cartographer/mapping/2d/probability_grid.h"
 #include "cartographer/mapping/2d/proto/submaps_options_2d.pb.h"
 #include "cartographer/mapping/2d/range_data_inserter_2d_probability_grid.h"
+#include "cartographer/mapping/2d/range_data_inserter_2d_tsdf.h"
 #include "cartographer/mapping/2d/submap_2d.h"
+#include "cartographer/mapping/2d/tsdf_2d.h"
 #include "cartographer/mapping/proto/serialization.pb.h"
 #include "cartographer/mapping/proto/submap_visualization.pb.h"
 #include "cartographer/mapping/submaps.h"
@@ -53,18 +55,23 @@ class Submap2DProbabilityGrid : public Submap2D {
   void ToResponseProto(const transform::Rigid3d& global_submap_pose,
                        proto::SubmapQuery::Response* response) const override;
 
-  const ProbabilityGrid& grid() const override { return probability_grid_; }
+  const ProbabilityGrid& probability_grid() const override {
+    return probability_grid_;
+  }
+  const TSDF2D& tsdf() const override { return tsdf_; }
 
   // Insert 'range_data' into this submap using 'range_data_inserter'. The
   // submap must not be finished yet.
   void InsertRangeData(
       const sensor::RangeData& range_data,
       const RangeDataInserter2DProbabilityGrid& range_data_inserter);
+  void InsertRangeData(const sensor::RangeData& range_data,
+                       const RangeDataInserter2DTSDF& range_data_inserter);
   void Finish() override;
 
  private:
   ProbabilityGrid probability_grid_;
-  std::shared_ptr<RangeDataInserter2DProbabilityGrid> range_data_inserter_;
+  TSDF2D tsdf_;
 };
 
 }  // namespace mapping

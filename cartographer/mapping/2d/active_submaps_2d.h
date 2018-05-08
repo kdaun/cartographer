@@ -74,12 +74,12 @@ class ActiveSubmaps2D {
   virtual std::vector<std::shared_ptr<Submap2D>> submaps() const = 0;
 };
 
-template <typename Submap2DType, typename RangeDataInserter2DType>
 class ActiveSubmaps2DI : public ActiveSubmaps2D {
  public:
   explicit ActiveSubmaps2DI(const proto::SubmapsOptions2D& options)
       : options_(options),
-        range_data_inserter_(options.range_data_inserter_options()) {
+        range_data_inserter_(options.range_data_inserter_options()),
+        range_data_inserter_tsdf_(options.range_data_inserter_options()) {
     // We always want to have at least one likelihood field which we can return,
     // and will create it at the origin in absence of a better choice.
     AddSubmap(Eigen::Vector2f::Zero());
@@ -95,6 +95,7 @@ class ActiveSubmaps2DI : public ActiveSubmaps2D {
   void InsertRangeData(const sensor::RangeData& range_data) {
     for (auto& submap : submaps_) {
       submap->InsertRangeData(range_data, range_data_inserter_);
+      submap->InsertRangeData(range_data, range_data_inserter_tsdf_);
     }
     if (submaps_.back()->num_range_data() == options_.num_range_data()) {
       AddSubmap(range_data.origin.head<2>());
@@ -123,7 +124,7 @@ class ActiveSubmaps2DI : public ActiveSubmaps2D {
     }
     constexpr int kInitialSubmapSize = 100;
 
-    submaps_.push_back(common::make_unique<Submap2DType>(
+    submaps_.push_back(common::make_unique<Submap2DProbabilityGrid>(
         MapLimits(options_.resolution(),
                   origin.cast<double>() + 0.5 * kInitialSubmapSize *
                                               options_.resolution() *
@@ -134,35 +135,12 @@ class ActiveSubmaps2DI : public ActiveSubmaps2D {
     LOG(INFO) << "Added submap " << matching_submap_index_ + submaps_.size();
   }
 
-  std::vector<std::shared_ptr<Submap2DType>> submaps_;
+  std::vector<std::shared_ptr<Submap2DProbabilityGrid>> submaps_;
   const proto::SubmapsOptions2D options_;
-  RangeDataInserter2DType range_data_inserter_;
+  RangeDataInserter2DProbabilityGrid range_data_inserter_;
+  RangeDataInserter2DTSDF range_data_inserter_tsdf_;
   int matching_submap_index_ = 0;
 };
-
-template <>
-inline void ActiveSubmaps2DI<Submap2DTSDF, RangeDataInserter2DTSDF>::AddSubmap(
-    const Eigen::Vector2f& origin) {
-  if (submaps_.size() > 1) {
-    // This will crop the finished Submap before inserting a new Submap to
-    // reduce peak memory usage a bit.
-    FinishSubmap();
-  }
-  constexpr int kInitialSubmapSize = 100;
-
-  const proto::RangeDataInserterOptions2DTSDF& tsdf_options =
-      options_.range_data_inserter_options().tsdf();
-  submaps_.push_back(common::make_unique<Submap2DTSDF>(
-      MapLimits(options_.resolution(),
-                origin.cast<double>() + 0.5 * kInitialSubmapSize *
-                                            options_.resolution() *
-                                            Eigen::Vector2d::Ones(),
-                CellLimits(kInitialSubmapSize, kInitialSubmapSize)),
-      origin, tsdf_options.truncation_distance(),
-      tsdf_options.maximum_weight()));
-
-  LOG(INFO) << "Added submap " << matching_submap_index_ + submaps_.size();
-}
 
 }  // namespace mapping
 }  // namespace cartographer

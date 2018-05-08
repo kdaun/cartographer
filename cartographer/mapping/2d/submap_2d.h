@@ -45,7 +45,8 @@ class Submap2D : public Submap {
   Submap2D(const MapLimits& limits, const Eigen::Vector2f& origin);
   explicit Submap2D(const proto::Submap& proto);
 
-  virtual const Grid2D& grid() const = 0;
+  virtual const Grid2D& probability_grid() const = 0;
+  virtual const Grid2D& tsdf() const = 0;
 
   // Insert 'range_data' into this submap using 'range_data_inserter'. The
   // submap must not be finished yet.

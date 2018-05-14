@@ -49,14 +49,24 @@ void GenerateRangeData(const ScanCloudGenerator::ModelType model_type,
   switch (model_type) {
     case ScanCloudGenerator::ModelType::CIRCLE:
       test_set_generator.generateCircle(scan_cloud, size[0], noise_std_dev);
+      break;
     case ScanCloudGenerator::ModelType::SQUARE:
       test_set_generator.generateSquare(scan_cloud, size[0], noise_std_dev);
+      break;
     case ScanCloudGenerator::ModelType::RECTANGLE:
       test_set_generator.generateRectangle(scan_cloud, size[0], size[1],
                                            noise_std_dev);
-      range_data.returns = scan_cloud;
-      range_data.origin = Eigen::Vector3f{0, 0, 0};
+      break;
+    case ScanCloudGenerator::ModelType::HALFSQUARE:
+      test_set_generator.generateHalfSquare(scan_cloud, size[0],
+                                            noise_std_dev);
+      break;
+    case ScanCloudGenerator::ModelType::NONE:
+      LOG(FATAL)<<"No ModelType specified";
+      break;
   }
+    range_data.returns = scan_cloud;
+    range_data.origin = Eigen::Vector3f{0, 0, 0};
 }
 
 Sample GenerateSample(double error_trans, double error_rot,
@@ -269,9 +279,19 @@ void EvaluateScanMatcher(
     range_data_inserter.Insert(sample.range_data, grid.get());
   }
 
+
+  cartographer::transform::Rigid2d initial_pose_estimate =
+      cartographer::transform::Rigid2d::Translation({0.0, 0.0});
+  cartographer::transform::Rigid2d matched_pose_estimate =
+      cartographer::transform::Rigid2d::Translation({0.0, 0.0});
   for (auto sample : test_set) {
     SampleResult sample_result;
-    MatchScan(sample, ceres_scan_matcher_options, *grid.get(), &sample_result);
+    MatchScan(sample, ceres_scan_matcher_options, *grid.get(), &sample_result, initial_pose_estimate, &matched_pose_estimate);
+    sensor::RangeData
+        matched_range_data = cartographer::sensor::TransformRangeData( sample.range_data,
+                                                                       transform::Embed3D(matched_pose_estimate.cast<float>()));
+    range_data_inserter.Insert(matched_range_data, grid.get()); //todo(kdaun) matching transform
+    initial_pose_estimate = matched_pose_estimate;
     results->push_back(sample_result);
   }
 }
@@ -280,23 +300,23 @@ template <typename GridType>
 void MatchScan(const Sample& sample,
                const cartographer::mapping::scan_matching::proto::
                    CeresScanMatcherOptions2D& ceres_scan_matcher_options,
-               const GridType& grid, SampleResult* sample_result) {
+               const GridType& grid, SampleResult* sample_result, const cartographer::transform::Rigid2d& initial_pose_estimate,
+               cartographer::transform::Rigid2d* matched_pose_estimate) {
   cartographer::mapping::scan_matching::CeresScanMatcher2D scan_matcher(
       ceres_scan_matcher_options);
 
-  const Eigen::Vector2d target_translation = {0., 0.};
-  const cartographer::transform::Rigid2d initial_pose_estimate =
-      cartographer::transform::Rigid2d::Translation({0.0, 0.0});
-  cartographer::transform::Rigid2d matched_pose_estimate;
+  const Eigen::Vector2d target_translation = initial_pose_estimate.translation();
+ // const cartographer::transform::Rigid2d initial_pose_estimate =
+ //     cartographer::transform::Rigid2d::Translation({0.0, 0.0});
   ceres::Solver::Summary summary;
 
   scan_matcher.Match(target_translation, initial_pose_estimate,
-                     sample.range_data.returns, grid, &matched_pose_estimate,
+                     sample.range_data.returns, grid, matched_pose_estimate,
                      &summary);
   const auto initial_error =
       initial_pose_estimate * sample.ground_truth_pose;
   const auto matching_error =
-      matched_pose_estimate * sample.ground_truth_pose;
+      *matched_pose_estimate * sample.ground_truth_pose;
   sample_result->initial_trans_error = initial_error.translation().norm();
   sample_result->matching_trans_error = matching_error.translation().norm();
   sample_result->initial_rot_error = initial_error.rotation().smallestAngle();
@@ -310,7 +330,7 @@ void MatchScan(const Sample& sample,
             << sample_result->matching_time;
 
    renderGridwithScan(grid, sample, initial_pose_estimate,
-                    matched_pose_estimate);
+                    *matched_pose_estimate);
 }
 
 template <typename GridType, typename RangeDataInserter>
@@ -397,8 +417,8 @@ void RunScanMatchingEvaluation() {
       ceres_scan_matcher_options =
           cartographer::mapping::scan_matching::CreateCeresScanMatcherOptions2D(
               parameter_dictionary.get());
-  int n_training = 25;
-  int n_test = 1000;
+  int n_training = 10;
+  int n_test = 100;
 
   std::ofstream log_file;
   std::string log_file_path;
@@ -411,17 +431,18 @@ void RunScanMatchingEvaluation() {
               "matching_time\n";
 
   // std::vector<double> trans_errors = {0.05, 0.1, 0.25, 0.5};
-  std::vector<double> trans_errors = {0.0};
-  std::vector<double> rot_errors = {0.2 * M_PI_4, 0.4 * M_PI_4, 0.6 * M_PI_4,
-                                    0.8 * M_PI_4};
+  std::vector<double> trans_errors = {0.0, 0.05};
+  //std::vector<double> rot_errors = {0.2 * M_PI_4, 0.4 * M_PI_4, 0.6 * M_PI_4,
+  //                                  0.8 * M_PI_4};
+  std::vector<double> rot_errors = {0};
 
   for (double error_trans : trans_errors) {
     for (double error_rot : rot_errors) {
       const ScanCloudGenerator::ModelType model_type =
-          ScanCloudGenerator::ModelType::RECTANGLE;
+          ScanCloudGenerator::ModelType::HALFSQUARE;
       const Eigen::Vector2d size = {0.5, 0.5};
-      const double resolution = 0.05;
-      const float cloud_noise = 0.01;
+      const double resolution = 0.03;
+      const float cloud_noise = 0.0;
       std::vector<Sample> training_set;
       std::vector<Sample> test_set;
       GenerateSampleSet(n_training, n_test, error_trans, error_rot, model_type,
@@ -711,7 +732,7 @@ int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
   FLAGS_logtostderr = true;
   google::ParseCommandLineFlags(&argc, &argv, true);
-  // cartographer::evaluation::RunScanMatchingEvaluation();
+  cartographer::evaluation::RunScanMatchingEvaluation();
   // cartographer::evaluation::RunEvaluateGradients();
-  cartographer::evaluation::RunEvaluateNoiseLevels();
+  //cartographer::evaluation::RunEvaluateNoiseLevels();
 }

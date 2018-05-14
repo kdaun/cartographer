@@ -64,7 +64,9 @@ void RangeDataInserter2DTSDF::Insert(const sensor::RangeData& range_data,
       const Eigen::Array2i cell = origin_cell + delta * position / num_samples;
       // float resolution = tsdf->limits().resolution();
       const Eigen::Vector2f cell_position = tsdf->limits().GetCellCenter(cell);
-      float distance = (hit - cell_position).dot(direction);
+      //float distance = (hit - cell_position).dot(direction);
+      float distance_sign = (hit - cell_position).dot(direction) > 0 ? 1.0 : -1.0;
+      float distance = distance_sign * (hit - cell_position).norm();
       if (distance > truncation_distance) {
         distance = truncation_distance;
       } else if (distance < -truncation_distance) {
@@ -94,8 +96,7 @@ void RangeDataInserter2DTSDF::UpdateCell(TSDF2D* const tsdf,
   float updated_weight = tsdf->GetWeight(cell) + update_weight;
   float updated_sdf = updated_weight > 0.f
                           ? (tsdf->GetTSDF(cell) * tsdf->GetWeight(cell) +
-                             update_sdf * update_weight) /
-                                updated_weight
+                             update_sdf * update_weight) / updated_weight
                           : tsdf->GetTSDF(cell);
   tsdf->UpdateCell(cell, updated_sdf, updated_weight);
 }

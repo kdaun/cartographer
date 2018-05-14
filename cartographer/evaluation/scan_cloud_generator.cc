@@ -18,6 +18,46 @@ void ScanCloudGenerator::generateSquare(cartographer::sensor::PointCloud& cloud,
   generateRectangle(cloud, size, size, noise_std_dev);
 }
 
+void ScanCloudGenerator::generateHalfSquare(cartographer::sensor::PointCloud& cloud,
+                                        float size, float noise_std_dev) {  // std::random_device r;
+  //
+  std::normal_distribution<float> normal_distribution(0,
+                                                      noise_std_dev);  // 0.01
+
+  cloud.clear();
+  float x_min = -size / 2.0;
+  float x_max = size / 2.0;
+  float y_min = 0.0;
+  float y_max = size / 2.0;
+
+  std::uniform_real_distribution<double> error_translation_direction(-M_PI,
+                                                                     M_PI);
+  double e_orientation;
+  double e_scale = noise_std_dev == 0.0 ? 0.0 : noise_std_dev;
+  double e_x;
+  double e_y;
+
+  for (float x = x_min; x <= x_max + 1e-5; x += resolution_) {
+    float y = y_max;
+    e_orientation = error_translation_direction(e1);
+    e_x = std::cos(e_orientation) * e_scale;
+    e_y = std::sin(e_orientation) * e_scale;
+    cloud.emplace_back(Eigen::Vector3f(x + e_x, y + e_y, 0.));
+  }
+  for (float y = y_min; y <= y_max + 1e-5; y += resolution_) {
+    float x = x_min;
+    e_orientation = error_translation_direction(e1);
+    e_x = std::cos(e_orientation) * e_scale;
+    e_y = std::sin(e_orientation) * e_scale;
+    cloud.emplace_back(Eigen::Vector3f(x + e_x, y + e_y, 0.));
+    x = x_max;
+    e_orientation = error_translation_direction(e1);
+    e_x = std::cos(e_orientation) * e_scale;
+    e_y = std::sin(e_orientation) * e_scale;
+    cloud.emplace_back(Eigen::Vector3f(x + e_x, y + e_y, 0.));
+  }
+}
+
 void ScanCloudGenerator::generateRectangle(
     cartographer::sensor::PointCloud& cloud, float size_x, float size_y,
     float noise_std_dev) {

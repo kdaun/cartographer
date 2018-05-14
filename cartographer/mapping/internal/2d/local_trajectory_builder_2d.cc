@@ -91,7 +91,7 @@ std::unique_ptr<transform::Rigid2d> LocalTrajectoryBuilder2D::ScanMatch(
   ceres::Solver::Summary summary;
   ceres_scan_matcher_.Match(pose_prediction.translation(), initial_ceres_pose,
                             filtered_gravity_aligned_point_cloud,
-                            matching_submap->probability_grid(),
+                            matching_submap->tsdf(),
                             pose_observation.get(), &summary);
   if (pose_observation) {
     kCeresScanMatcherCostMetric->Observe(summary.final_cost);

@@ -91,11 +91,11 @@ void Submap2DProbabilityGrid::ToResponseProto(
 
   Eigen::Array2i offset;
   CellLimits limits;
-  probability_grid_.ComputeCroppedLimits(&offset, &limits);
+  tsdf_.ComputeCroppedLimits(&offset, &limits);
 
   std::string cells;
   for (const Eigen::Array2i& xy_index : XYIndexRangeIterator(limits)) {
-    if (probability_grid_.IsKnown(xy_index + offset)) {
+    if (tsdf_.IsKnown(xy_index + offset)) {
       // We would like to add 'delta' but this is not possible using a value and
       // alpha. We use premultiplied alpha, so when 'delta' is positive we can
       // add it by setting 'alpha' to zero. If it is negative, we set 'value' to
@@ -103,8 +103,8 @@ void Submap2DProbabilityGrid::ToResponseProto(
       // is currently white, so walls will look too gray. This should be hard to
       // detect visually for the user, though.
       const int delta =
-          128 - ProbabilityToLogOddsInteger(
-                    probability_grid_.GetProbability(xy_index + offset));
+          (128 -
+              256.0*std::abs(1.-tsdf_.GetTSDF(xy_index + offset)/tsdf_.GetMaxTSDF()))*tsdf_.GetWeight(xy_index + offset)/tsdf_.GetMaxWeight();
       const uint8 alpha = delta > 0 ? 0 : -delta;
       const uint8 value = delta > 0 ? delta : 0;
       cells.push_back(value);
@@ -115,6 +115,28 @@ void Submap2DProbabilityGrid::ToResponseProto(
       cells.push_back(0);                                    // alpha
     }
   }
+  /**
+  for (const Eigen::Array2i& xy_index : XYIndexRangeIterator(limits)) {
+    if (probability_grid_.IsKnown(xy_index + offset)) {
+      // We would like to add 'delta' but this is not possible using a value and
+      // alpha. We use premultiplied alpha, so when 'delta' is positive we can
+      // add it by setting 'alpha' to zero. If it is negative, we set 'value' to
+      // zero, and use 'alpha' to subtract. This is only correct when the pixel
+      // is currently white, so walls will look too gray. This should be hard to
+      // detect visually for the user, though.
+      const int delta =
+          128 - ProbabilityToLogOddsInteger(
+              probability_grid_.GetProbability(xy_index + offset));
+      const uint8 alpha = delta > 0 ? 0 : -delta;
+      const uint8 value = delta > 0 ? delta : 0;
+      cells.push_back(value);
+      cells.push_back((value || alpha) ? alpha : 1);
+    } else {
+      constexpr uint8 kUnknownLogOdds = 0;
+      cells.push_back(static_cast<uint8>(kUnknownLogOdds));  // value
+      cells.push_back(0);                                    // alpha
+    }
+  }**/
   proto::SubmapQuery::Response::SubmapTexture* const texture =
       response->add_textures();
   common::FastGzipString(cells, texture->mutable_cells());

@@ -92,10 +92,9 @@ bool TSDF2D::UpdateCell(const Eigen::Array2i& cell_index,
                  value_helper->getUpdateMarker();
     *weight_cell = value_helper->WeightToValue(updated_weight);
   } else {
-    /**tsdf_cell =
-        value_helper->TSDFToValue(updated_sdf) +
-    value_helper->getUpdateMarker(); *weight_cell =
-    value_helper->WeightToValue(updated_weight);*/
+    *tsdf_cell = value_helper->TSDFToValue(updated_sdf) +
+                 value_helper->getUpdateMarker();
+    *weight_cell = value_helper->WeightToValue(updated_weight);
   }
   return true;
 }

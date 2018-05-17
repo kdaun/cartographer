@@ -91,7 +91,7 @@ void RangeDataInserter2DTSDF::Insert(const sensor::RangeData& range_data,
   constexpr float kPadding = 1e-6f;
   tsdf->GrowLimits(bounding_box.min() - kPadding * Eigen::Vector2f::Ones());
   tsdf->GrowLimits(bounding_box.max() + kPadding * Eigen::Vector2f::Ones());
-  bool use_experimental_traversal = false;
+  bool use_experimental_traversal = true;
   if (!use_experimental_traversal) {
     const Eigen::Vector2f origin = range_data.origin.head<2>();
     const Eigen::Array2i origin_cell = tsdf->limits().GetCellIndex(origin);
@@ -129,7 +129,7 @@ void RangeDataInserter2DTSDF::Insert(const sensor::RangeData& range_data,
     }
   } else {
     const Eigen::Vector2f origin = range_data.origin.head<2>();
-    const Eigen::Array2i origin_cell = tsdf->limits().GetCellIndex(origin);
+//    const Eigen::Array2i origin_cell = tsdf->limits().GetCellIndex(origin);
     for (const Eigen::Vector3f& hit_3d : range_data.returns) {
       const Eigen::Vector2f hit = hit_3d.head<2>();
 
@@ -148,6 +148,46 @@ void RangeDataInserter2DTSDF::Insert(const sensor::RangeData& range_data,
       Eigen::Vector2f t_max, t_delta;
       GetRaytracingHelperVariables(origin, ray, t_start, t_end, voxel_size_inv,
                                    &voxel_index, &voxel_step, &t_max, &t_delta);
+
+      float t = 0.0;
+
+      while (t < 1.0f + t_truncation_distance) {
+        int min_coeff_idx;
+        const float t_next = t_max.minCoeff(&min_coeff_idx);
+        //const Eigen::Array2i origin_cell = tsdf->limits().GetCellIndex(origin);
+        //const Eigen::Vector2f cell_position = tsdf->limits().GetCellCenter(cell);
+
+        Eigen::Vector2f sampling_point = origin + t * ray;
+        Eigen::Array2i cell_index = tsdf->limits().GetCellIndex(sampling_point);
+        Eigen::Vector2f cell_center = tsdf->limits().GetCellCenter(cell_index);
+
+        // Distance in meters from sensor origin to the effective traversal point.
+        // Can be estimated in two different ways.
+        float distance;
+        constexpr bool kUseCentroidTraversalDistance = true;
+        if (kUseCentroidTraversalDistance) {
+          // Estimate using the distance to the voxel centroid.
+          distance = (cell_center - origin).norm();
+        } else {
+          // Estimate using the distance midpoint of the voxel entry and voxel exit
+          // points.
+          const float t_mid = (t + t_next) / 2.0;
+          const float t_adj = t_start + t_mid * (t_end - t_start);
+          distance = t_adj * range;
+        }
+
+        UpdateCell(tsdf, cell_index, range - distance, range);
+
+
+        // Advance to next voxel.
+        t = t_next;
+        //voxel_index(min_coeff_idx) += voxel_step(min_coeff_idx);
+        //local_voxel_index(min_coeff_idx) += voxel_step(min_coeff_idx);
+        t_max(min_coeff_idx) += t_delta(min_coeff_idx);
+
+
+      }
+
     }
   }
   tsdf->FinishUpdate();

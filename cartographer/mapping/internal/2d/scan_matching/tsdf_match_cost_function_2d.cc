@@ -23,6 +23,22 @@
 namespace cartographer {
 namespace mapping {
 namespace scan_matching {
+namespace {
+
+// https://en.wikipedia.org/wiki/Huber_loss
+template <typename T>
+T PseudoHuberLess(const T& x, double delta) {
+  const T delta_squared = T(delta * delta);
+  return delta * (ceres::sqrt(T(1) + (x * x / delta_squared)) - T(1));
+}
+
+template <typename T>
+T PseudoSigmoid(const T& x, double delta) {
+  const T delta_squared = T(delta * delta);
+  return T(0.2) * x / (sqrt(T(1) + x * x / (T(delta * delta))) * T(delta));
+}
+
+}  // namespace
 
 // Computes a cost for matching the 'point_cloud' in the 'grid' at
 // a 'pose'. The cost increases with the signed distance of the matched point

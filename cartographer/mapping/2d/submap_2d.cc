@@ -30,6 +30,9 @@
 #include "cartographer/mapping/range_data_inserter_interface.h"
 #include "glog/logging.h"
 
+#include <chrono>
+#include <ctime>
+
 namespace cartographer {
 namespace mapping {
 
@@ -164,9 +167,27 @@ std::vector<std::shared_ptr<const Submap2D>> ActiveSubmaps2D::InsertRangeData(
       submaps_.back()->num_range_data() == options_.num_range_data()) {
     AddSubmap(range_data.origin.head<2>());
   }
+
+
+  static double insertion_time_seconds = 0.0;
+  static int num_map_insertions = 0;
+
+  auto start = std::chrono::system_clock::now();
   for (auto& submap : submaps_) {
     submap->InsertRangeData(range_data, range_data_inserter_.get());
   }
+  auto end = std::chrono::system_clock::now();
+
+  std::chrono::duration<double> elapsed_seconds = end-start;
+  insertion_time_seconds += elapsed_seconds.count();
+  num_map_insertions++;
+  if(num_map_insertions % 100 == 0) {
+
+    LOG(INFO) << "num_map_insertions " << num_map_insertions;
+    LOG(INFO) << "Map update took " << insertion_time_seconds;
+  }
+
+
   if (submaps_.front()->num_range_data() == 2 * options_.num_range_data()) {
     submaps_.front()->Finish();
   }

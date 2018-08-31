@@ -50,7 +50,7 @@ float ComputeCandidateScore(const TSDF2D& tsdf,
         tsdf.GetMaxCorrespondenceCost();
     const float weight = tsd_and_weight.second;
     candidate_score += normalized_tsd_score * weight;
-    summed_weight += weight;
+    summed_weight += weight + 1.0;
   }
   if (summed_weight == 0.f) return 0.f;
   candidate_score /= summed_weight;

@@ -27,6 +27,10 @@
 #include "cartographer/common/port.h"
 #include "cartographer/ground_truth/proto/relations.pb.h"
 #include "cartographer/ground_truth/relations_text_file.h"
+#include "cartographer/io/draw_ground_truth.h"
+#include "cartographer/io/draw_trajectories.h"
+#include "cartographer/io/file_writer.h"
+#include "cartographer/io/image.h"
 #include "cartographer/io/proto_stream.h"
 #include "cartographer/io/proto_stream_deserializer.h"
 #include "cartographer/mapping/proto/pose_graph.pb.h"
@@ -47,6 +51,9 @@ DEFINE_bool(read_text_file_with_unix_timestamps, false,
 DEFINE_bool(write_relation_metrics, false,
             "Enable exporting relation metrics as comma-separated values to "
             "[pose_graph_filename].relation_metrics.csv");
+DEFINE_bool(write_relation_image, false,
+            "Enable exporting a visualization of the trajectory an the relations to "
+            "[pose_graph_filename].png");
 
 namespace cartographer {
 namespace ground_truth {
@@ -65,8 +72,11 @@ struct Error {
 Error ComputeError(const transform::Rigid3d& pose1,
                    const transform::Rigid3d& pose2,
                    const transform::Rigid3d& expected) {
+  transform::Rigid3d expected_corrected =
+      transform::Rigid3d(-expected.translation(), expected.rotation());
+
   const transform::Rigid3d error =
-      (pose1.inverse() * pose2) * expected.inverse();
+      (pose1.inverse() * pose2) * expected_corrected.inverse();
   return Error{error.translation().squaredNorm(),
                common::Pow2(transform::GetAngle(error))};
 }
@@ -171,15 +181,15 @@ transform::Rigid3d LookupTransform(
 void Run(const std::string& pose_graph_filename,
          const std::string& relations_filename,
          const bool read_text_file_with_unix_timestamps,
-         const bool write_relation_metrics) {
+         const bool write_relation_metrics,
+const bool write_relation_image) {
   LOG(INFO) << "Reading pose graph from '" << pose_graph_filename << "'...";
   mapping::proto::PoseGraph pose_graph =
       io::DeserializePoseGraphFromFile(pose_graph_filename);
-
   const transform::TransformInterpolationBuffer transform_interpolation_buffer(
       pose_graph.trajectory(0));
-
   proto::GroundTruth ground_truth;
+
   if (read_text_file_with_unix_timestamps) {
     LOG(INFO) << "Reading relations from '" << relations_filename << "'...";
     ground_truth = ReadRelationsTextFile(relations_filename);
@@ -188,6 +198,61 @@ void Run(const std::string& pose_graph_filename,
     std::ifstream ground_truth_stream(relations_filename.c_str(),
                                       std::ios::binary);
     CHECK(ground_truth.ParseFromIstream(&ground_truth_stream));
+  }
+
+  if(write_relation_image) {
+
+    Eigen::AlignedBox3d bounding_box;
+    double resolution = 0.025;
+
+    for (int node_index = 0; node_index < pose_graph.trajectory(0).node_size();
+         ++node_index) {
+      const mapping::proto::Trajectory::Node& node =
+          pose_graph.trajectory(0).node(node_index);
+      bounding_box.extend((1.0 / resolution) *
+          Eigen::Vector3d{node.pose().translation().x(),
+                          node.pose().translation().y(),
+                          node.pose().translation().z()});
+    }
+    bounding_box.extend(bounding_box.min() -
+        (1.0 / resolution) * Eigen::Vector3d::Ones());
+    bounding_box.extend(bounding_box.max() +
+        (1.0 / resolution) * Eigen::Vector3d::Ones());
+    Eigen::Vector2i bb_delta =
+        (bounding_box.max() - bounding_box.min()).head<2>().cast<int>();
+
+    const auto voxel_index_to_pixel =
+        [=](const Eigen::Array3i& index) -> Eigen::Array2i {
+          // We flip the y axis, since matrices rows are counted from the top.
+          return Eigen::Array2i((int)bounding_box.max()[0] - index[0],
+                                index[1] - (int)bounding_box.min()[1]);
+        };
+
+    cartographer::io::Image image(bb_delta[0], bb_delta[1]);
+
+    for (int row = 0; row < image.height(); ++row) {
+      for (int column = 0; column < image.width(); ++column) {
+        image.SetPixel(column, row,
+                       cartographer::io::Uint8Color({{255, 255, 255}}));
+      }
+    }
+
+    cartographer::io::DrawTrajectory(
+        pose_graph.trajectory(0), cartographer::io::GetColor(0),
+        [&voxel_index_to_pixel,
+            &resolution](const transform::Rigid3d& pose) -> Eigen::Array2i {
+          return voxel_index_to_pixel(
+              ((1.f / resolution) * pose.translation()).cast<int>());
+        },
+        image.GetCairoSurface().get());
+    cartographer::io::DrawGroundTruth(
+        pose_graph.trajectory(0), ground_truth, cartographer::io::GetColor(1),
+        [&voxel_index_to_pixel,
+            &resolution](const transform::Rigid3d& pose) -> Eigen::Array2i {
+          return voxel_index_to_pixel(
+              ((1.f / resolution) * pose.translation()).cast<int>());
+        },
+        image.GetCairoSurface().get());
   }
 
   std::vector<Error> errors;
@@ -202,6 +267,11 @@ void Run(const std::string& pose_graph_filename,
         transform::ToRigid3(relation.expected());
     errors.push_back(ComputeError(pose1, pose2, expected));
   }
+
+  cartographer::io::StreamFileWriter file_writer("test.png");
+  //image.WritePng(&file_writer);
+  LOG(INFO) << "Wrote image to: " << file_writer.GetFilename();
+  file_writer.Close();
 
   const std::string relation_metrics_filename =
       pose_graph_filename + ".relation_metrics.csv";
@@ -234,5 +304,5 @@ int main(int argc, char** argv) {
 
   ::cartographer::ground_truth::Run(
       FLAGS_pose_graph_filename, FLAGS_relations_filename,
-      FLAGS_read_text_file_with_unix_timestamps, FLAGS_write_relation_metrics);
+      FLAGS_read_text_file_with_unix_timestamps, FLAGS_write_relation_metrics, FLAGS_write_relation_image);
 }

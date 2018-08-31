@@ -35,6 +35,7 @@ namespace cartographer {
 namespace mapping {
 namespace scan_matching {
 
+
 proto::CeresScanMatcherOptions2D CreateCeresScanMatcherOptions2D(
     common::LuaParameterDictionary* const parameter_dictionary) {
   proto::CeresScanMatcherOptions2D options;
@@ -101,6 +102,21 @@ void CeresScanMatcher2D::Match(const Eigen::Vector2d& target_translation,
       nullptr /* loss function */, ceres_pose_estimate);
 
   ceres::Solve(ceres_solver_options_, &problem, summary);
+
+
+  static int num_optimizations = 0 ;
+  static double summed_optimization_time = 0.0;
+  static int  summed_iterations = 0;
+
+  num_optimizations++;
+  summed_optimization_time += summary->total_time_in_seconds;
+  summed_iterations += summary->iterations.size();
+
+  if (num_optimizations%100 == 0) {
+    LOG(INFO) << "num_optimizations " << num_optimizations;
+    LOG(INFO) << "summed_optimization_time " << summed_optimization_time;
+    LOG(INFO) << "summed_iterations " << summed_iterations;
+  }
 
   *pose_estimate = transform::Rigid2d(
       {ceres_pose_estimate[0], ceres_pose_estimate[1]}, ceres_pose_estimate[2]);

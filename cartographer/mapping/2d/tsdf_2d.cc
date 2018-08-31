@@ -148,6 +148,12 @@ bool TSDF2D::DrawToSubmapTexture(
       cells.push_back(0);  // alpha
       continue;
     }
+    if (GetTSD(xy_index + offset) < -0.1) {
+      cells.push_back(0);  // value
+      cells.push_back(0);  // alpha
+      continue;
+    }
+
     // We would like to add 'delta' but this is not possible using a value and
     // alpha. We use premultiplied alpha, so when 'delta' is positive we can
     // add it by setting 'alpha' to zero. If it is negative, we set 'value' to
@@ -156,7 +162,14 @@ bool TSDF2D::DrawToSubmapTexture(
     // detect visually for the user, though.
     float normalized_tsdf = std::abs(GetTSD(xy_index + offset));
     normalized_tsdf =
-        std::pow(normalized_tsdf / value_converter_->getMaxTSD(), 0.5f);
+        std::pow(normalized_tsdf / value_converter_->getMaxTSD(), 0.9f); //0.45
+    if (std::abs(GetTSD(xy_index + offset)) < 0.1) {
+      normalized_tsdf = 0.;
+    }
+    else {
+
+      normalized_tsdf = 1.;
+    }
     float normalized_weight =
         GetWeight(xy_index + offset) / value_converter_->getMaxWeight();
     const int delta = static_cast<int>(
